@@ -40,3 +40,10 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# wiki
+bbs-mod-wiki.wiki/
+Blockbench_full/
+.trae/
+crash-reports/
+open-source/
