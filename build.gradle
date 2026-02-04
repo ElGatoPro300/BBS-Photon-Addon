@@ -1,0 +1,88 @@
+plugins {
+	id 'fabric-loom' version '1.15-SNAPSHOT'
+	id 'maven-publish'
+}
+
+version = project.mod_version + "-" + minecraft_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter {
+			includeGroup "maven.modrinth"
+		}
+	}
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+loom {
+    // Standard layout is now used (src/main/java, src/main/resources)
+    // splitEnvironmentSourceSets() // Removed as we normalized the layout
+	
+    // accessWidenerPath.set(getRootProject().file("src/main/resources/bbs.accesswidener")) // Commented out as file is missing
+}
+
+dependencies {
+	// To change the versions see the gradle.properties file
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	
+	modImplementation "maven.modrinth:sodium:mc1.20.1-0.5.8"
+	modCompileOnly "maven.modrinth:iris:1.7.0+1.20.1"
+	modImplementation "maven.modrinth:watermedia:2.1.37"
+
+	modImplementation "org.anarres:jcpp:1.4.14"
+	modImplementation "io.github.douira:glsl-transformer:2.0.0-pre13"
+
+    // Local dependencies (Put these jars in 'libs' folder)
+    modImplementation name: 'bbs-cml-edition' 
+    modImplementation name: 'photon'
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 17
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.base.archivesName.get()}"}
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+}
