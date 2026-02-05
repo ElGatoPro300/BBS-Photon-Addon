@@ -11,6 +11,11 @@ base {
 }
 
 repositories {
+	// Add repositories to retrieve artifacts from in here.
+	// You should only use this when depending on other mods because
+	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
+	// for more information about repositories.
 	exclusiveContent {
 		forRepository {
 			maven {
@@ -25,6 +30,11 @@ repositories {
     flatDir {
         dirs 'libs'
     }
+
+	maven {
+		name = "Gegy"
+		url = "https://maven.gegy.dev/"
+	}
 }
 
 configurations.all {
@@ -58,10 +68,6 @@ dependencies {
 
 	modImplementation "org.anarres:jcpp:1.4.14"
 	modImplementation "io.github.douira:glsl-transformer:2.0.0-pre13"
-
-    // Local dependencies (Put these jars in 'libs' folder)
-    modImplementation name: 'bbs-cml-edition' 
-    modImplementation name: 'photon'
 }
 
 processResources {
