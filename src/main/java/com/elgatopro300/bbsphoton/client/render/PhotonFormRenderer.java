@@ -22,9 +22,15 @@ import org.joml.Vector3f;
 
 import net.minecraft.util.math.MathHelper;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITickable {
+    // Global registry of active renderers to ensure cleanup
+    public static final List<PhotonFormRenderer> activeRenderers = Collections.synchronizedList(new ArrayList<>());
+
     // Using "bbs_photon" namespace and "textures/photon_texture.png" path
     // This matches assets/bbs_photon/textures/photon_texture.png in the classpath
     public static final Link ICON = new Link("bbs_photon", "textures/photon_texture.png");
@@ -40,18 +46,29 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         super(form);
     }
     
+    // Watchdog to clean up effects when rendering stops (e.g. form closed)
+    private long lastRenderTime = 0;
+
+    /**
+     * Called by global client tick to clean up abandoned effects
+     */
+    public boolean checkCleanup() {
+        if (currentEffect != null && System.currentTimeMillis() - lastRenderTime > 200) {
+            stopCurrentEffect();
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void tick(IEntity iEntity) {
         if (form.paused.get()) return;
-
-        // Note: EntityEffect usually hooks into the world/entity tick.
-        // For StubEntity (editor), the game might be paused or the entity not in world list.
-        // We cannot manually tick EntityEffect as it doesn't expose a public tick() method.
-        // However, updating position in render3D should ensure it renders at the correct location.
+        // Local tick watchdog is secondary to global one
     }
 
     @Override
     public void render3D(FormRenderingContext context) {
+        lastRenderTime = System.currentTimeMillis();
         IEntity iEntity = context.entity;
         
         String effectId = form.effect.get();
@@ -75,38 +92,56 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
         // Update position/rotation every frame for smooth rendering
         if (currentEffect != null && currentEffect.getRuntime() != null && currentEffect.getRuntime().isAlive()) {
-            var runtime = currentEffect.getRuntime();
-            var root = runtime.getRoot();
+            try {
+                var runtime = currentEffect.getRuntime();
+                var root = runtime.getRoot();
 
-            double x = iEntity.getX();
-            double y = iEntity.getY();
-            double z = iEntity.getZ();
-            float yaw = iEntity.getYaw();
+                double x = iEntity.getX();
+                double y = iEntity.getY();
+                double z = iEntity.getZ();
+                float yaw = iEntity.getYaw();
 
-            // Use interpolation for MCEntity to prevent jitter
-            if (iEntity instanceof MCEntity) {
-                Entity mcEntity = ((MCEntity) iEntity).getMcEntity();
-                if (mcEntity != null) {
-                    float pt = context.transition;
-                    x = MathHelper.lerp(pt, mcEntity.prevX, mcEntity.getX());
-                    y = MathHelper.lerp(pt, mcEntity.prevY, mcEntity.getY());
-                    z = MathHelper.lerp(pt, mcEntity.prevZ, mcEntity.getZ());
-                    yaw = MathHelper.lerp(pt, mcEntity.prevYaw, mcEntity.getYaw());
+                // Use interpolation for MCEntity to prevent jitter
+                if (iEntity instanceof MCEntity) {
+                    Entity mcEntity = ((MCEntity) iEntity).getMcEntity();
+                    if (mcEntity != null) {
+                        float pt = context.transition;
+                        x = MathHelper.lerp(pt, mcEntity.prevX, mcEntity.getX());
+                        y = MathHelper.lerp(pt, mcEntity.prevY, mcEntity.getY());
+                        z = MathHelper.lerp(pt, mcEntity.prevZ, mcEntity.getZ());
+                        yaw = MathHelper.lerp(pt, mcEntity.prevYaw, mcEntity.getYaw());
+                    }
                 }
-            }
 
-            // Update position
-            root.updatePos(new Vector3f((float) x, (float) y, (float) z));
+                // Update position
+                root.updatePos(new Vector3f((float) x, (float) y, (float) z));
 
-            // Update rotation
-            Quaternionf q = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
-            root.updateRotation(q);
-            
-            // If using dummy entity or player override, update its position too
-            // Note: We don't use dummyEntity anymore, but if we did, or if we need to sync something else
-            if (dummyEntity != null) {
-                dummyEntity.setPos(x, y, z);
-                dummyEntity.setYaw(yaw);
+                // Update rotation
+                Quaternionf q = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
+                root.updateRotation(q);
+                
+                // Update dummy entity position if it exists
+                // We must update prev values to prevent interpolation artifacts or culling issues
+                if (dummyEntity != null) {
+                    dummyEntity.prevX = x;
+                    dummyEntity.prevY = y;
+                    dummyEntity.prevZ = z;
+                    dummyEntity.lastRenderX = x;
+                    dummyEntity.lastRenderY = y;
+                    dummyEntity.lastRenderZ = z;
+                    
+                    dummyEntity.setPos(x, y, z);
+                    dummyEntity.setYaw(yaw);
+                    dummyEntity.setHeadYaw(yaw);
+                    
+                    // Ensure dummy entity stays in valid world context if world changes
+                    if (dummyEntity.getWorld() != null && iEntity.getWorld() != null && dummyEntity.getWorld() != iEntity.getWorld()) {
+                         // World changed, restart effect
+                         stopCurrentEffect();
+                    }
+                }
+            } catch (Exception e) {
+                // Prevent render crash
             }
         }
     }
@@ -137,23 +172,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         context.batcher.fullTexturedBox(texture, x, y, w, h);
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        // Schedule cleanup on main thread to avoid ConcurrentModificationException
-        // caused by modifying particle lists from the Finalizer thread while Render thread iterates them.
-        try {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client != null) {
-                client.execute(() -> {
-                    stopCurrentEffect();
-                });
-            }
-        } catch (Exception e) {
-            // Ignore errors if client is already shut down
-        }
-        super.finalize();
-    }
-
     private void stopCurrentEffect() {
         if (currentEffect != null) {
             try {
@@ -164,37 +182,63 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 // Ignore errors during destruction
             }
             currentEffect = null;
+            
+            // Remove dummy entity from world if it exists
+            if (dummyEntity != null) {
+                dummyEntity.remove(Entity.RemovalReason.DISCARDED);
+                dummyEntity = null;
+            }
+            
+            activeRenderers.remove(this);
         }
     }
 
     private void startEffect(IEntity iEntity, String effectId) {
         try {
-            Entity entity = null;
-            if (iEntity instanceof MCEntity) {
-                entity = ((MCEntity) iEntity).getMcEntity();
-            } else {
-                // For editor/preview (StubEntity), use the client player as the host
-                // This ensures the entity is valid and in the world, preventing Photon crashes.
-                // We will manually override the position in render3D.
-                entity = MinecraftClient.getInstance().player;
+            World world = iEntity.getWorld();
+            if (world == null) {
+                world = MinecraftClient.getInstance().world;
             }
-
-            if (entity == null) {
-                if (tickCounter++ % 100 == 0) {
-                     System.out.println("BBSPhoton: Could not get entity for effect (Player is null?).");
-                }
+            
+            if (world == null) {
                 return;
             }
 
+            // Create a dummy entity for the effect to attach to
+            // This prevents it from following the player
+            if (dummyEntity == null || dummyEntity.getWorld() != world) {
+                if (dummyEntity != null) {
+                    dummyEntity.remove(Entity.RemovalReason.DISCARDED);
+                }
+                
+                dummyEntity = new net.minecraft.entity.decoration.ArmorStandEntity(world, iEntity.getX(), iEntity.getY(), iEntity.getZ());
+                dummyEntity.setInvisible(true);
+                dummyEntity.setNoGravity(true);
+                dummyEntity.setInvulnerable(true);
+                // NoClip prevents collision and interaction
+                dummyEntity.noClip = true;
+                
+                // Add to world to ensure Photon can find/update it
+                if (world instanceof net.minecraft.client.world.ClientWorld) {
+                    ((net.minecraft.client.world.ClientWorld) world).addEntity(dummyEntity.getId(), dummyEntity);
+                }
+            }
+            
+            // Sync initial position
+            dummyEntity.setPos(iEntity.getX(), iEntity.getY(), iEntity.getZ());
+            dummyEntity.setYaw(iEntity.getYaw());
+            dummyEntity.prevX = iEntity.getX();
+            dummyEntity.prevY = iEntity.getY();
+            dummyEntity.prevZ = iEntity.getZ();
+
             Identifier location = new Identifier(effectId);
-            // System.out.println("BBSPhoton: Attempting to load effect: " + location);
             var fx = FXHelper.getFX(location);
             if (fx != null) {
-                // System.out.println("BBSPhoton: Starting effect " + effectId + " on " + entity.getName().getString());
-                currentEffect = new EntityEffect(fx, entity.getWorld(), entity, EntityEffect.AutoRotate.NONE);
+                currentEffect = new EntityEffect(fx, dummyEntity.getWorld(), dummyEntity, EntityEffect.AutoRotate.NONE);
                 currentEffect.start();
-            } else {
-                // System.out.println("BBSPhoton: Failed to find effect " + effectId);
+                if (!activeRenderers.contains(this)) {
+                    activeRenderers.add(this);
+                }
             }
         } catch (Exception e) {
             System.out.println("BBSPhoton: Error starting effect " + effectId);

@@ -1,14 +1,19 @@
 package com.elgatopro300.bbsphoton.client;
 
+import com.elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBSModClient;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class BBSPhotonClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("bbs-photon-addon-client");
@@ -17,6 +22,18 @@ public class BBSPhotonClient implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("Initializing BBS Photon Client Addon...");
         
+        // Register global cleanup watchdog for Photon effects
+        // This ensures effects are stopped when the form renderer is no longer active (e.g. UI closed)
+        // preventing global Photon engine corruption
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!PhotonFormRenderer.activeRenderers.isEmpty()) {
+                List<PhotonFormRenderer> renderers = new ArrayList<>(PhotonFormRenderer.activeRenderers);
+                for (PhotonFormRenderer renderer : renderers) {
+                    renderer.checkCleanup();
+                }
+            }
+        });
+
         // Add PhotonForm to Extra category after the client has fully started
         // This ensures that BBSResources.init() has already run and we don't get overwritten
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
