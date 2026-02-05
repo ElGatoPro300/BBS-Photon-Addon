@@ -35,6 +35,9 @@ repositories {
 		name = "Gegy"
 		url = "https://maven.gegy.dev/"
 	}
+	maven {
+		url = "https://maven.firstdarkdev.xyz/snapshots"
+	}
 }
 
 configurations.all {
@@ -56,6 +59,7 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	modImplementation("dev.lambdaurora:spruceui:${project.spruceui_version}")
+	modImplementation "com.lowdragmc.ldlib:ldlib-fabric-${project.minecraft_version}:${project.ldlib_version}"
 	
 	// Uncomment the following line to enable the deprecated Fabric API modules. 
 	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
@@ -68,6 +72,10 @@ dependencies {
 
 	modImplementation "org.anarres:jcpp:1.4.14"
 	modImplementation "io.github.douira:glsl-transformer:2.0.0-pre13"
+
+	// Local dependencies (Put these jars in 'libs' folder)
+    modImplementation name: 'bbs-cml-edition' 
+    modImplementation name: 'photon'
 }
 
 processResources {
