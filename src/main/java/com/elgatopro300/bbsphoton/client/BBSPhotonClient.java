@@ -25,6 +25,19 @@ public class BBSPhotonClient implements ClientModInitializer {
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonClient.class));
                 LOGGER.info("Registered 'bbs_photon' source pack.");
 
+                // Verify icon resource existence
+                try {
+                    var stream = BBSPhotonClient.class.getResourceAsStream("/assets/bbs_photon/textures/photon_texture.png");
+                    if (stream != null) {
+                        LOGGER.info("VERIFICATION: Icon file found in classpath!");
+                        stream.close();
+                    } else {
+                        LOGGER.error("VERIFICATION: Icon file NOT found in classpath at /assets/bbs_photon/textures/photon_texture.png");
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("VERIFICATION: Error checking icon file", e);
+                }
+
                 LOGGER.info("Client started. Injecting PhotonForm into Extra category...");
                 if (BBSModClient.getFormCategories() != null && 
                     BBSModClient.getFormCategories().getExtraForms() != null && 
