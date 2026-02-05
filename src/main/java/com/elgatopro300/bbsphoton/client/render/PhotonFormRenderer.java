@@ -16,8 +16,9 @@ import net.minecraft.entity.Entity;
 import java.util.Objects;
 
 public class PhotonFormRenderer extends FormRenderer<PhotonForm> {
-    // Using "bbs_photon" namespace and "textures/icons/..." path
-    public static final Link ICON = new Link("bbs_photon", "textures/icons/photon_form.png");
+    // Using "bbs_photon" namespace and "textures/photon_texture.png" path
+    // This matches assets/bbs_photon/textures/photon_texture.png in the classpath
+    public static final Link ICON = new Link("bbs_photon", "textures/photon_texture.png");
 
     private String lastEffectId = "";
     private EntityEffect currentEffect;

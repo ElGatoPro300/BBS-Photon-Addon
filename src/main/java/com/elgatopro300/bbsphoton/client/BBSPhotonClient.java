@@ -7,6 +7,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import mchorse.bbs_mod.BBSMod;
+import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
+
 public class BBSPhotonClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("bbs-photon-addon-client");
 
@@ -18,6 +21,10 @@ public class BBSPhotonClient implements ClientModInitializer {
         // This ensures that BBSResources.init() has already run and we don't get overwritten
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             try {
+                // Register source pack for bbs_photon namespace
+                BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonClient.class));
+                LOGGER.info("Registered 'bbs_photon' source pack.");
+
                 LOGGER.info("Client started. Injecting PhotonForm into Extra category...");
                 if (BBSModClient.getFormCategories() != null && 
                     BBSModClient.getFormCategories().getExtraForms() != null && 
