@@ -3,7 +3,7 @@
   "id": "bbs-photon-addon",
   "version": "${version}",
   "name": "BBS Photon Addon",
-  "description": "Integration between Blockbuster (BBS) and Photon particle engine.",
+  "description": "Integration between BBS and Photon particle engine.",
   "authors": [
     "ElGatoPro300"
   ],

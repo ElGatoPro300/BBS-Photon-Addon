@@ -53,7 +53,8 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
      * Called by global client tick to clean up abandoned effects
      */
     public boolean checkCleanup() {
-        if (currentEffect != null && System.currentTimeMillis() - lastRenderTime > 200) {
+        // Increased timeout to 1000ms (1 second) to prevent accidental cleanup during UI transitions
+        if (currentEffect != null && System.currentTimeMillis() - lastRenderTime > 1000) {
             stopCurrentEffect();
             return true;
         }
@@ -86,7 +87,12 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
              long now = System.currentTimeMillis();
              if (now - lastAttemptTime > 2000) {
                  lastAttemptTime = now;
-                 startEffect(iEntity, effectId);
+                 // Schedule start on main thread to avoid concurrency issues
+                 final IEntity entityRef = iEntity;
+                 final String effectIdRef = effectId;
+                 MinecraftClient.getInstance().execute(() -> {
+                     startEffect(entityRef, effectIdRef);
+                 });
              }
         }
 
@@ -114,11 +120,12 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 }
 
                 // Update position
-                root.updatePos(new Vector3f((float) x, (float) y, (float) z));
-
-                // Update rotation
-                Quaternionf q = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
-                root.updateRotation(q);
+                if (root != null) {
+                     root.updatePos(new Vector3f((float) x, (float) y, (float) z));
+                     // Update rotation
+                     Quaternionf q = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
+                     root.updateRotation(q);
+                }
                 
                 // Update dummy entity position if it exists
                 // We must update prev values to prevent interpolation artifacts or culling issues
@@ -136,12 +143,19 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     
                     // Ensure dummy entity stays in valid world context if world changes
                     if (dummyEntity.getWorld() != null && iEntity.getWorld() != null && dummyEntity.getWorld() != iEntity.getWorld()) {
-                         // World changed, restart effect
-                         stopCurrentEffect();
+                         // World changed, restart effect safely
+                         // But do NOT call stopCurrentEffect() here directly to avoid ConcurrentModification
+                         // Just schedule it
+                         final String idToLog = lastEffectId;
+                         MinecraftClient.getInstance().execute(() -> {
+                             System.out.println("BBSPhoton: World changed for " + idToLog + ", scheduling restart");
+                             stopCurrentEffect();
+                         });
                     }
                 }
             } catch (Exception e) {
                 // Prevent render crash
+                System.out.println("BBSPhoton: Render Exception: " + e.getMessage());
             }
         }
     }
@@ -174,17 +188,27 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
     private void stopCurrentEffect() {
         if (currentEffect != null) {
-            try {
-                if (currentEffect.getRuntime() != null) {
-                    currentEffect.getRuntime().destroy(true);
+            final var effectToDestroy = currentEffect;
+            final var idToLog = lastEffectId;
+
+            // Schedule destruction to avoid ConcurrentModificationException if Photon is iterating
+            MinecraftClient.getInstance().execute(() -> {
+                try {
+                    if (effectToDestroy.getRuntime() != null) {
+                        System.out.println("BBSPhoton: Stopping effect (scheduled) " + idToLog);
+                        effectToDestroy.getRuntime().destroy(false);
+                    }
+                } catch (Exception e) {
+                    System.out.println("BBSPhoton: Error stopping effect: " + e.getMessage());
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                // Ignore errors during destruction
-            }
+            });
+
             currentEffect = null;
             
             // Remove dummy entity from world if it exists
             if (dummyEntity != null) {
+                System.out.println("BBSPhoton: Removing dummy entity " + dummyEntity.getId());
                 dummyEntity.remove(Entity.RemovalReason.DISCARDED);
                 dummyEntity = null;
             }
@@ -204,12 +228,18 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 return;
             }
 
+            System.out.println("BBSPhoton: Starting effect " + effectId);
+
             // Create a dummy entity for the effect to attach to
             // This prevents it from following the player
             if (dummyEntity == null || dummyEntity.getWorld() != world) {
                 if (dummyEntity != null) {
                     dummyEntity.remove(Entity.RemovalReason.DISCARDED);
                 }
+                
+                // If we are in a UI world (often client level), ensure we don't conflict
+                // Some UI worlds might not support adding entities normally?
+                // But Photon needs the entity to be in the world's entity list to find it?
                 
                 dummyEntity = new net.minecraft.entity.decoration.ArmorStandEntity(world, iEntity.getX(), iEntity.getY(), iEntity.getZ());
                 dummyEntity.setInvisible(true);
@@ -219,8 +249,12 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 dummyEntity.noClip = true;
                 
                 // Add to world to ensure Photon can find/update it
+                // ONLY if it's not already added (check by ID or existence)
                 if (world instanceof net.minecraft.client.world.ClientWorld) {
-                    ((net.minecraft.client.world.ClientWorld) world).addEntity(dummyEntity.getId(), dummyEntity);
+                    net.minecraft.client.world.ClientWorld clientWorld = (net.minecraft.client.world.ClientWorld) world;
+                    if (clientWorld.getEntityById(dummyEntity.getId()) == null) {
+                        clientWorld.addEntity(dummyEntity.getId(), dummyEntity);
+                    }
                 }
             }
             
