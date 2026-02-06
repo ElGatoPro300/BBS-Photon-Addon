@@ -65,7 +65,7 @@ neoForge {
 
 dependencies {
     // Connector & FFAPI (via Sinytra Maven)
-    implementation "org.sinytra:connector:${project.connector_version}"
+    additionalRuntimeClasspath "org.sinytra:connector:${project.connector_version}"
     implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:${project.ffapi_version}"
 
     // Dependencies
@@ -76,7 +76,7 @@ dependencies {
     
     // Local jars
     implementation name: 'photon'
-    implementation "com.elgatopro300:bbs-cml-edition:1.21.1" // Fabric mod, loaded via Connector
+    implementation name: 'bbs-cml-edition' // Fabric mod, loaded via Connector
     
     // Additional Fabric deps if needed by BBS/Addon (loaded via FFAPI/Connector)
     // implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-fabric" // Optional
