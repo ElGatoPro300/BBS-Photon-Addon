@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "bbs-photon-addon",
+  "version": "${version}",
+  "name": "BBS Photon Addon",
+  "description": "Integration between BBS and Photon particle engine.",
+  "authors": [
+    "ElGatoPro300"
+  ],
+  "contact": {
+    "homepage": "https://example.com",
+    "sources": "https://github.com/Extra/bbs-photon-addon"
+  },
+  "license": "MIT",
+  "icon": "assets/bbs_photon/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.elgatopro300.bbsphoton.BBSPhoton"
+    ],
+    "client": [
+      "com.elgatopro300.bbsphoton.client.BBSPhotonClient"
+    ],
+    "bbs-addon": [
+      "com.elgatopro300.bbsphoton.BBSPhotonAddon"
+    ],
+    "bbs-addon-client": [
+      "com.elgatopro300.bbsphoton.client.BBSPhotonClientAddon"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "bbs": ">=1.8.0",
+    "photon": "*"
+  }
+}
