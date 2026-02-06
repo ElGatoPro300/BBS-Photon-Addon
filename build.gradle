@@ -60,7 +60,7 @@ dependencies {
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	modImplementation("dev.lambdaurora:spruceui:${project.spruceui_version}")
 	modImplementation "dev.lambdaurora.lambdynamiclights:lambdynamiclights-api:${project.lambdynamiclights_api_version}"
-	modImplementation "com.lowdragmc.ldlib:ldlib-fabric-${project.minecraft_version}:${project.ldlib_version}"
+	modImplementation "com.lowdragmc.ldlib2:ldlib2-neoforge-1.21.1:${project.ldlib2_version}"
 	
 	modImplementation "maven.modrinth:sodium:mc1.21.1-0.6.13-fabric"
 	modImplementation "maven.modrinth:iris:1.8.8+1.21.1-fabric"
