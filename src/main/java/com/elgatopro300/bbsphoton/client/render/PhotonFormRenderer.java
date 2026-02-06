@@ -12,6 +12,7 @@ import mchorse.bbs_mod.ui.framework.UIContext;
 import mchorse.bbs_mod.graphics.texture.Texture;
 import mchorse.bbs_mod.resources.Link;
 import java.lang.reflect.Method;
+import mchorse.bbs_mod.utils.pose.Transform;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.resources.ResourceLocation;
@@ -124,23 +125,38 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     // Not an MCEntity or method not found
                 }
 
-                // Update position
-                if (root != null) {
-                     root.updatePos(new Vector3f((float) x, (float) y, (float) z));
-                     // Update rotation
-                     Quaternionf q = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
-                     root.updateRotation(q);
-                }
-                
+                // Calculate transform
+                Transform t = form.transform.get();
+                Vector3f tPos = t.translate;
+                Vector3f tRot = t.rotate;
+                Vector3f tScale = t.scale;
+
+                // Calculate rotation
+                Quaternionf entityRot = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
+                Quaternionf formRot = new Quaternionf()
+                    .rotateZ((float) Math.toRadians(tRot.z))
+                    .rotateY((float) Math.toRadians(tRot.y))
+                    .rotateX((float) Math.toRadians(tRot.x));
+
+                Quaternionf finalRot = new Quaternionf(entityRot).mul(formRot);
+
+                // Calculate position with offset
+                Vector3f offset = new Vector3f(tPos);
+                entityRot.transform(offset);
+
+                double finalX = x + offset.x;
+                double finalY = y + offset.y;
+                double finalZ = z + offset.z;
+
                 // Update dummy entity position if it exists
-                // We must update prev values to prevent interpolation artifacts or culling issues
+                // IMPORTANT: We must update the dummy entity to the OFFSET position so EntityEffectExecutor
+                // (which tracks this entity) renders the effect at the correct location.
                 if (dummyEntity != null) {
-                    dummyEntity.xo = x;
-                    dummyEntity.yo = y;
-                    dummyEntity.zo = z;
-                    // dummyEntity.lastRenderX = x; // Not available in Mojang mappings/NeoForge directly?
+                    dummyEntity.xo = finalX;
+                    dummyEntity.yo = finalY;
+                    dummyEntity.zo = finalZ;
                     
-                    dummyEntity.setPos(x, y, z);
+                    dummyEntity.setPos(finalX, finalY, finalZ);
                     dummyEntity.setYRot(yaw);
                     dummyEntity.setYHeadRot(yaw);
                     
@@ -152,15 +168,19 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     } catch (Exception e) {}
                     
                     if (dummyEntity.level() != null && entityWorld != null && dummyEntity.level() != entityWorld) {
-                         // World changed, restart effect safely
-                         // But do NOT call stopCurrentEffect() here directly to avoid ConcurrentModification
-                         // Just schedule it
                          final String idToLog = lastEffectId;
                          Minecraft.getInstance().execute(() -> {
                              System.out.println("BBSPhoton: World changed for " + idToLog + ", scheduling restart");
                              stopCurrentEffect();
                          });
                     }
+                }
+
+                // Update root object directly as well (for rotation/scale and immediate position update)
+                if (root != null) {
+                     root.updatePos(new Vector3f((float) finalX, (float) finalY, (float) finalZ));
+                     root.updateRotation(finalRot);
+                     root.updateScale(tScale);
                 }
             } catch (Exception e) {
                 // Prevent render crash
