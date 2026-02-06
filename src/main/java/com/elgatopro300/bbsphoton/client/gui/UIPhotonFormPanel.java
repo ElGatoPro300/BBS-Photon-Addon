@@ -130,7 +130,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
         // 2. Scan ldlib/assets/photon/fx directory manually
         try {
             File gameDir = FabricLoader.getInstance().getGameDir().toFile();
-            File photonFxDir = new File(gameDir, "ldlib/assets/photon/fx");
+            File photonFxDir = new File(gameDir, "ldlib2/assets/photon/fx");
             
             if (photonFxDir.exists() && photonFxDir.isDirectory()) {
                 File[] files = photonFxDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".fx"));
