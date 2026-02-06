@@ -2,6 +2,7 @@ package com.elgatopro300.bbsphoton.client;
 
 import com.elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
+import mchorse.bbs_mod.BBS;
 import mchorse.bbs_mod.BBSModClient;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -10,6 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
+
+import com.elgatopro300.bbsphoton.client.gui.UIPhotonForm;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +23,13 @@ public class BBSPhotonClient {
     public static void init() {
         LOGGER.info("Initializing BBS Photon Client Addon...");
         
+        try {
+            BBS.getEvents().register(new BBSPhotonClientAddon());
+            LOGGER.info("Registered BBSPhotonClientAddon to BBS EventBus");
+        } catch (Exception e) {
+            LOGGER.error("Failed to register BBSPhotonClientAddon", e);
+        }
+
         // Register global cleanup watchdog for Photon effects
         // This ensures effects are stopped when the form renderer is no longer active (e.g. UI closed)
         // preventing global Photon engine corruption
@@ -36,6 +46,18 @@ public class BBSPhotonClient {
         // This ensures that BBSResources.init() has already run and we don't get overwritten
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             try {
+                // Manual registration of Renderers and Panels (fallback)
+                try {
+                     LOGGER.info("Attempting manual registration of Photon renderers...");
+                     // Manually register renderer
+                     mchorse.bbs_mod.forms.FormUtilsClient.register(PhotonForm.class, PhotonFormRenderer::new);
+                     // Manually register panel
+                     mchorse.bbs_mod.ui.forms.editors.UIFormEditor.register(PhotonForm.class, UIPhotonForm::new);
+                     LOGGER.info("Manually registered PhotonForm renderers and panels");
+                } catch (Exception e) {
+                    LOGGER.error("Failed to manually register renderers/panels (might already be registered or API mismatch)", e);
+                }
+
                 // Register source pack for bbs_photon namespace
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonClient.class));
                 LOGGER.info("Registered 'bbs_photon' source pack.");
