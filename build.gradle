@@ -1,121 +1,97 @@
 plugins {
-	id 'fabric-loom' version '1.15-SNAPSHOT'
-	id 'maven-publish'
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '1.0.21'
+    id 'org.sinytra.adapter.userdev' version '1.2-SNAPSHOT'
 }
 
-version = project.mod_version + "-" + minecraft_version
-group = project.maven_group
-
-base {
-	archivesName = project.archives_base_name
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
 }
+
+version = project.mod_version
+group = project.mod_group_id
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
-	exclusiveContent {
-		forRepository {
-			maven {
-				name = "Modrinth"
-				url = "https://api.modrinth.com/maven"
-			}
-		}
-		filter {
-			includeGroup "maven.modrinth"
-		}
-	}
+    mavenLocal()
+    mavenCentral()
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+    }
+    maven {
+        name = "Sinytra"
+        url = "https://maven.sinytra.org/"
+    }
+    // maven {
+    //     name = "ParchmentMC"
+    //     url = "https://maven.parchmentmc.org"
+    // }
+    maven {
+        name = "LocalRepo"
+        url = uri("repo")
+    }
     flatDir {
         dirs 'libs'
     }
-
-	maven {
-		name = "Gegy"
-		url = "https://maven.gegy.dev/"
-	}
-	maven {
-		url = "https://maven.firstdarkdev.xyz/snapshots"
-	}
 }
 
-configurations.all {
-    resolutionStrategy {
-        eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.lwjgl') {
-                details.useVersion '3.3.1'
-            }
+neoForge {
+    version = project.neoforge_version
+
+    // parchment {
+    //     mappingsVersion = '1.21-2024.06.23-1.21'
+    //     minecraftVersion = '1.21'
+    // }
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+    }
+
+    mods {
+        "${project.mod_id}" {
+            sourceSet sourceSets.main
         }
     }
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    // Connector & FFAPI (via Sinytra Maven)
+    implementation "org.sinytra:connector:${project.connector_version}"
+    implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:${project.ffapi_version}"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation("dev.lambdaurora:spruceui:${project.spruceui_version}")
-	modImplementation "dev.lambdaurora.lambdynamiclights:lambdynamiclights-api:${project.lambdynamiclights_api_version}"
-	modImplementation "com.lowdragmc.ldlib2:ldlib2-neoforge-1.21.1:${project.ldlib2_version}"
-	
-	modImplementation "maven.modrinth:sodium:mc1.21.1-0.6.13-fabric"
-	modImplementation "maven.modrinth:iris:1.8.8+1.21.1-fabric"
-	modImplementation "maven.modrinth:watermedia:2.1.37"
-	modImplementation "maven.modrinth:lambdynamiclights:2.3.2+1.20.1"
-
-	modImplementation "org.anarres:jcpp:1.4.14"
-	modImplementation "io.github.douira:glsl-transformer:2.0.0-pre13"
-
-	// Local dependencies (Put these jars in 'libs' folder)
-    modImplementation name: 'bbs-cml-edition' 
-    modImplementation name: 'photon'
-}
-
-processResources {
-	inputs.property "version", project.version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
-	}
+    // Dependencies
+    implementation "maven.modrinth:ldlib:${project.ldlib2_version}"
+	implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
+	implementation "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
+	implementation "maven.modrinth:watermedia:2.1.37"
+    
+    // Local jars
+    implementation name: 'photon'
+    implementation "com.elgatopro300:bbs-cml-edition:1.21.1" // Fabric mod, loaded via Connector
+    
+    // Additional Fabric deps if needed by BBS/Addon (loaded via FFAPI/Connector)
+    // implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-fabric" // Optional
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+    options.encoding = 'UTF-8'
+    options.release = 21
 }
 
-java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
-}
-
-jar {
-	from("LICENSE") {
-		rename { "${it}_${project.base.archivesName.get()}"}
-	}
-}
-
-// configure the maven publication
-publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
-	}
+// Ensure fabric.mod.json and neoforge.mods.toml are included and expanded
+processResources {
+    inputs.property "version", project.version
+    filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
+        expand "version": project.version,
+               "file": [jarVersion: project.version]
+    }
 }

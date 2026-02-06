@@ -15,12 +15,6 @@
   "icon": "assets/bbs_photon/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": [
-      "com.elgatopro300.bbsphoton.BBSPhoton"
-    ],
-    "client": [
-      "com.elgatopro300.bbsphoton.client.BBSPhotonClient"
-    ],
     "bbs-addon": [
       "com.elgatopro300.bbsphoton.BBSPhotonAddon"
     ],
@@ -30,8 +24,8 @@
   },
   "depends": {
     "fabricloader": ">=0.14.21",
-    "minecraft": "~1.20.1",
-    "java": ">=17",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
     "bbs": ">=1.8.0",
     "photon": "*"
   }

@@ -4,9 +4,25 @@ pluginManagement {
 			name = 'Fabric'
 			url = 'https://maven.fabricmc.net/'
 		}
+		maven {
+			name = 'NeoForge'
+			url = 'https://maven.neoforged.net/releases'
+		}
+		maven {
+			name = "Sinytra"
+			url = "https://maven.sinytra.org/"
+		}
+		maven {
+			name = "Su5ed"
+			url = "https://maven.su5ed.dev/releases"
+		}
+		maven {
+			name = "Su5edSnapshots"
+			url = "https://maven.su5ed.dev/snapshots"
+		}
 		mavenCentral()
 		gradlePluginPortal()
 	}
 }
 
-rootProject.name = "BBS mod"
+rootProject.name = "bbs-photon-addon"

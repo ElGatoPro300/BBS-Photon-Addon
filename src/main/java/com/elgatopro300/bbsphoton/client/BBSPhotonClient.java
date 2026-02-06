@@ -3,7 +3,6 @@ package com.elgatopro300.bbsphoton.client;
 import com.elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBSModClient;
-import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import org.slf4j.Logger;
@@ -15,11 +14,10 @@ import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BBSPhotonClient implements ClientModInitializer {
+public class BBSPhotonClient {
     public static final Logger LOGGER = LoggerFactory.getLogger("bbs-photon-addon-client");
 
-    @Override
-    public void onInitializeClient() {
+    public static void init() {
         LOGGER.info("Initializing BBS Photon Client Addon...");
         
         // Register global cleanup watchdog for Photon effects
