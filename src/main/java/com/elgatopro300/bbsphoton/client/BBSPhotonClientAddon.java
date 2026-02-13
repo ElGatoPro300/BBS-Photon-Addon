@@ -13,36 +13,41 @@ import mchorse.bbs_mod.ui.utils.icons.Icon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BBSPhotonClientAddon extends BBSClientAddon {
+public class BBSPhotonClientAddon extends BBSClientAddon
+{
     public static final Logger LOGGER = LoggerFactory.getLogger("bbs-photon-addon-client");
 
     @Override
     @Subscribe
-    public void registerDashboardPanels(RegisterDashboardPanelsEvent event) {
-        // Register dashboard panels
+    public void registerDashboardPanels(RegisterDashboardPanelsEvent event)
+    {
+        /* Register dashboard panels */
     }
 
     @Override
     @Subscribe
-    public void registerFormsRenderers(RegisterFormsRenderersEvent event) {
+    public void registerFormsRenderers(RegisterFormsRenderersEvent event)
+    {
         LOGGER.info("Registering Photon form renderer and panel...");
-        // Register form renderers
+        /* Register form renderers */
         event.registerRenderer(PhotonForm.class, PhotonFormRenderer::new);
         event.registerPanel(PhotonForm.class, UIPhotonForm::new);
     }
 
     @Override
     @Subscribe
-    public void registerFormCategories(RegisterFormCategoriesEvent event) {
-        // NOTE: This is handled in BBSPhotonClient.onInitializeClient via ClientLifecycleEvents.CLIENT_STARTED
-        // to avoid being overwritten by BBSResources.init()
+    public void registerFormCategories(RegisterFormCategoriesEvent event)
+    {
+        /* NOTE: This is handled in BBSPhotonClient.onInitializeClient via ClientLifecycleEvents.CLIENT_STARTED
+         * to avoid being overwritten by BBSResources.init() */
     }
 
     @Override
     @Subscribe
-    public void registerIcons(RegisterIconsEvent event) {
+    public void registerIcons(RegisterIconsEvent event)
+    {
         LOGGER.info("Registering Photon form icon...");
-        // Updated to match actual icon size (96x96)
+        /* Updated to match actual icon size (96x96) */
         event.register(new Icon(PhotonFormRenderer.ICON, "bbs:photon", 0, 0, 40, 40, 40, 40));
     }
 }

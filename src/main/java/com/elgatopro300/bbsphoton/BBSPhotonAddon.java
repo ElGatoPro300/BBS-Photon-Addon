@@ -9,17 +9,19 @@ import mchorse.bbs_mod.resources.Link;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BBSPhotonAddon extends BBSAddon {
-
+public class BBSPhotonAddon extends BBSAddon
+{
     private static final Logger LOGGER = LoggerFactory.getLogger("BBS Photon Addon");
 
-    public BBSPhotonAddon() {
+    public BBSPhotonAddon()
+    {
         LOGGER.info("BBSPhotonAddon instantiated!");
     }
 
     @Override
     @Subscribe
-    public void registerForms(RegisterFormsEvent event) {
+    public void registerForms(RegisterFormsEvent event)
+    {
         LOGGER.info("Registering Photon form...");
         event.getForms().register(Link.create("bbs:photon"), PhotonForm.class);
         LOGGER.info("Registered Photon form: " + Link.create("bbs:photon"));

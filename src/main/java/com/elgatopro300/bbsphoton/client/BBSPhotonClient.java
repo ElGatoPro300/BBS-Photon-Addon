@@ -18,55 +18,71 @@ import com.elgatopro300.bbsphoton.client.gui.UIPhotonForm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.InputStream;
 
-public class BBSPhotonClient {
+public class BBSPhotonClient
+{
     public static final Logger LOGGER = LoggerFactory.getLogger("bbs-photon-addon-client");
 
-    public static void init() {
+    public static void init()
+    {
         LOGGER.info("Initializing BBS Photon Client Addon...");
         
-        try {
+        try
+        {
             BBS.getEvents().register(new BBSPhotonClientAddon());
             LOGGER.info("Registered BBSPhotonClientAddon to BBS EventBus");
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             LOGGER.error("Failed to register BBSPhotonClientAddon", e);
         }
 
-        // Register global cleanup watchdog for Photon effects
-        // This ensures effects are stopped when the form renderer is no longer active (e.g. UI closed)
-        // preventing global Photon engine corruption
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (!PhotonFormRenderer.activeRenderers.isEmpty()) {
+        /* Register global cleanup watchdog for Photon effects
+         * This ensures effects are stopped when the form renderer is no longer active (e.g. UI closed)
+         * preventing global Photon engine corruption */
+        ClientTickEvents.END_CLIENT_TICK.register(client ->
+        {
+            if (!PhotonFormRenderer.activeRenderers.isEmpty())
+            {
                 List<PhotonFormRenderer> renderers = new ArrayList<>(PhotonFormRenderer.activeRenderers);
-                for (PhotonFormRenderer renderer : renderers) {
+
+                for (PhotonFormRenderer renderer : renderers)
+                {
                     renderer.checkCleanup();
                 }
             }
         });
 
-        // Add PhotonForm to Extra category after the client has fully started
-        // This ensures that BBSResources.init() has already run and we don't get overwritten
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            try {
-                // Manual registration of Renderers and Panels (fallback)
-                try {
+        /* Add PhotonForm to Extra category after the client has fully started
+         * This ensures that BBSResources.init() has already run and we don't get overwritten */
+        ClientLifecycleEvents.CLIENT_STARTED.register(client ->
+        {
+            try
+            {
+                /* Manual registration of Renderers and Panels (fallback) */
+                try
+                {
                      LOGGER.info("Attempting manual registration of Photon renderers...");
-                     // Manually register renderer
+                     /* Manually register renderer */
                      mchorse.bbs_mod.forms.FormUtilsClient.register(PhotonForm.class, PhotonFormRenderer::new);
-                     // Manually register panel
+                     /* Manually register panel */
                      mchorse.bbs_mod.ui.forms.editors.UIFormEditor.register(PhotonForm.class, UIPhotonForm::new);
                      LOGGER.info("Manually registered PhotonForm renderers and panels");
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     LOGGER.error("Failed to manually register renderers/panels (might already be registered or API mismatch)", e);
                 }
 
-                // Register source pack for bbs_photon namespace
+                /* Register source pack for bbs_photon namespace */
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonClient.class));
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon_icons", "assets", BBSPhotonClient.class));
                 LOGGER.info("Registered 'bbs_photon' source pack.");
 
-                // Manual registration for Addons Panel (Fix for Sinytra/Connector)
-                try {
+                /* Manual registration for Addons Panel (Fix for Sinytra/Connector) */
+                try
+                {
                      Link iconLink = new Link("bbs_photon_icons", "bbs_photon/icon.png");
                      
                      AddonInfo info = new AddonInfo(
@@ -76,40 +92,54 @@ public class BBSPhotonClient {
                         "Integration between BBS and Photon particle engine.", 
                         java.util.List.of("ElGatoPro300"), 
                         iconLink, 
-                        "https://example.com", 
-                        "https://github.com/Extra/bbs-photon-addon/issues", 
-                        "https://github.com/Extra/bbs-photon-addon"
+                        "https://discord.gg/MAHVQBSce6",
+                        "",
+                        ""
                      );
                      BBSModClient.registerAddon(info);
                      LOGGER.info("Manually registered BBS Photon Addon to BBS Addons Panel.");
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     LOGGER.error("Failed to manually register addon info", e);
                 }
 
-                // Verify icon resource existence
-                try {
-                    var stream = BBSPhotonClient.class.getResourceAsStream("/assets/bbs_photon/textures/photon_texture.png");
-                    if (stream != null) {
+                /* Verify icon resource existence */
+                try
+                {
+                    InputStream stream = BBSPhotonClient.class.getResourceAsStream("/assets/bbs_photon/textures/photon_texture.png");
+                    
+                    if (stream != null)
+                    {
                         LOGGER.info("VERIFICATION: Icon file found in classpath!");
                         stream.close();
-                    } else {
+                    }
+                    else
+                    {
                         LOGGER.error("VERIFICATION: Icon file NOT found in classpath at /assets/bbs_photon/textures/photon_texture.png");
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     LOGGER.error("VERIFICATION: Error checking icon file", e);
                 }
 
                 LOGGER.info("Client started. Injecting PhotonForm into Extra category...");
+                
                 if (BBSModClient.getFormCategories() != null && 
                     BBSModClient.getFormCategories().getExtraForms() != null && 
-                    BBSModClient.getFormCategories().getExtraForms().getExtraCategory() != null) {
-                    
+                    BBSModClient.getFormCategories().getExtraForms().getExtraCategory() != null)
+                {
                     BBSModClient.getFormCategories().getExtraForms().getExtraCategory().addForm(new PhotonForm());
                     LOGGER.info("Successfully added PhotonForm to Extra category.");
-                } else {
+                }
+                else
+                {
                     LOGGER.error("FormCategories or ExtraForms category is null!");
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 LOGGER.error("Failed to add PhotonForm to Extra category", e);
             }
         });
