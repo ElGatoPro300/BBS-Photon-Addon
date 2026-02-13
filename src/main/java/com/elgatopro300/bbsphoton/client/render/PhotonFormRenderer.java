@@ -129,8 +129,36 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
                 // Calculate transform using PoseStack (handles both Model Block and Form transforms)
                 PoseStack stack = null;
+                boolean isUI = false;
                 try {
-                    stack = (PoseStack) context.getClass().getField("stack").get(context);
+                    // Use reflection to access fields to avoid mapping issues
+                    
+                    // 1. Check 'ui' field
+                    try {
+                        isUI = context.getClass().getField("ui").getBoolean(context);
+                    } catch (Exception e) {
+                        // If field not found, assume false or try method
+                    }
+                    
+                    // 2. Check 'type' field (FormRenderType) as backup
+                    if (!isUI) {
+                        try {
+                            Object typeObj = context.getClass().getField("type").get(context);
+                            if (typeObj != null) {
+                                String typeName = typeObj.toString();
+                                // PREVIEW = Form Editor
+                                // ITEM_INVENTORY = Inventory
+                                if (typeName.contains("PREVIEW") || typeName.contains("INVENTORY") || typeName.contains("GUI")) {
+                                    isUI = true;
+                                }
+                            }
+                        } catch (Exception e) {}
+                    }
+                    
+                    // Only try to get stack if not in UI (UI stack is in screen coords, causes massive offsets)
+                    if (!isUI) {
+                        stack = (PoseStack) context.getClass().getField("stack").get(context);
+                    }
                 } catch (Exception e) {
                     // Ignore reflection error
                 }
