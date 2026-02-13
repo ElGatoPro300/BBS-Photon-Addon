@@ -26,7 +26,6 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
     // public UITextbox effect; // Removed name bar as requested
     
     public UIToggle paused;
-    public UITrackpad speed;
 
     private List<String> cachedEffects;
 
@@ -45,17 +44,10 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
             if (this.form != null) this.form.paused.set(b.getValue());
         });
         
-        this.speed = new UITrackpad((v) -> {
-            if (this.form != null) this.form.speed.set(v.floatValue());
-        });
-        this.speed.tooltip(IKey.raw("Simulation Speed"));
-
         this.options.add(this.pickEffect.marginTop(6));
         // this.options.add(this.effect); // Removed
         
         this.options.add(this.paused.marginTop(6));
-        
-        this.options.add(UI.label(IKey.raw("Speed")).marginTop(12), this.speed);
     }
     
     private void openPicker() {
@@ -66,7 +58,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
         
         UIListOverlayPanel panel = new UIListOverlayPanel(IKey.raw("Select Photon Effect"), (str) -> {
             // this.effect.setText(str);
-            this.pickEffect.label = IKey.raw(str); // Update button label to show selection
+            // this.pickEffect.label = IKey.raw(str); // Update button label to show selection
             if (this.form != null) this.form.effect.set(str);
         });
         
@@ -78,14 +70,10 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
     public void startEdit(PhotonForm form) {
         super.startEdit(form);
         
-        // this.effect.setText(form.effect.get());
-        if (!form.effect.get().isEmpty()) {
-            this.pickEffect.label = IKey.raw(form.effect.get());
-        } else {
-            this.pickEffect.label = IKey.raw("Pick Photon Effect");
-        }
+        // Always keep the static label as requested
+        this.pickEffect.label = IKey.raw("Pick Photon Effect");
+        
         this.paused.setValue(form.paused.get());
-        this.speed.setValue(form.speed.get());
     }
     
     private void populateEffects(List<String> list) {

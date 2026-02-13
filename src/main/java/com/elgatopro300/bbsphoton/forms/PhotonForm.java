@@ -8,12 +8,10 @@ import mchorse.bbs_mod.settings.values.numeric.ValueFloat;
 public class PhotonForm extends Form {
     public final ValueString effect = new ValueString("effect", "");
     public final ValueBoolean paused = new ValueBoolean("paused", false);
-    public final ValueFloat speed = new ValueFloat("speed", 1.0F);
 
     public PhotonForm() {
         super();
         this.add(this.effect);
         this.add(this.paused);
-        this.add(this.speed);
     }
 }

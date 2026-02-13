@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 
 public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITickable {
     // Global registry of active renderers to ensure cleanup
@@ -45,7 +46,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     private boolean loggedDebug = false;
     private int tickCounter = 0;
     private long lastAttemptTime = 0;
-
+    
     public PhotonFormRenderer(PhotonForm form) {
         super(form);
     }
@@ -67,24 +68,8 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
     @Override
     public void tick(IEntity iEntity) {
-        // Paused logic handled in render/update loop or by not ticking
-        // But Photon usually ticks in its own system. We might need to control it.
-        // If form is paused, we should probably stop the effect or set speed to 0?
-        // However, Photon effects might need to be paused explicitly.
-        // For now, if paused, we can just return.
-        if (form.paused.get()) {
-            if (currentEffect != null) {
-                // If there's a way to pause the effect, do it here.
-                // Otherwise, we might just not update its position?
-                // Photon effects tick themselves usually via the world tick.
-            }
-            return;
-        }
-        
-        // Update speed if possible
-        // Currently we don't have direct access to set speed on an already running effect easily
-        // unless we recreate it or if Photon supports it.
-        // Assuming Photon's EntityEffectExecutor updates based on entity or global tick.
+        // Standard ticking handled by Photon's global system
+        // We only manage lifecycle (start/stop) in render3D
     }
 
     @Override
@@ -93,26 +78,61 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         IEntity iEntity = context.entity;
         
         String effectId = form.effect.get();
-        
-        // Detect change in effect ID
-        if (!Objects.equals(effectId, lastEffectId)) {
-             stopCurrentEffect();
-             lastEffectId = effectId;
+
+        // Handle empty effect ID
+        if (effectId.isEmpty()) {
+             if (currentEffect != null || !lastEffectId.isEmpty()) {
+                 stopCurrentEffect();
+                 lastEffectId = "";
+             }
+             return;
         }
 
-        if (effectId.isEmpty()) return;
+        // Check if effect ID changed
+        boolean idChanged = !Objects.equals(effectId, lastEffectId);
+        
+        if (idChanged) {
+             if (currentEffect != null) {
+                 final String idToLog = lastEffectId;
+                 Minecraft.getInstance().execute(() -> {
+                     System.out.println("BBSPhoton: Effect changed from " + idToLog + " to " + effectId);
+                     stopCurrentEffect();
+                 });
+             }
+             
+             // Update lastEffectId immediately to prevent loop
+             lastEffectId = effectId;
+             
+             // Reset attempt time to allow immediate start (if not paused)
+             lastAttemptTime = 0; 
+        }
 
+        // Check if effect needs restart (Loop logic)
+        // If currentEffect is dead (finished), we check if we should restart it.
+        // Paused = TRUE -> Do NOT restart (Play Once).
+        // Paused = FALSE -> Restart (Loop).
+        boolean isAlive = currentEffect != null && currentEffect.getRuntime() != null && currentEffect.getRuntime().isAlive();
+        
         // Start effect if not running, with cooldown (2 seconds)
-        if (currentEffect == null || currentEffect.getRuntime() == null || !currentEffect.getRuntime().isAlive()) {
+        if (currentEffect == null || !isAlive) {
              long now = System.currentTimeMillis();
              if (now - lastAttemptTime > 2000) {
-                 lastAttemptTime = now;
-                 // Schedule start on main thread to avoid concurrency issues
-                 final IEntity entityRef = iEntity;
-                 final String effectIdRef = effectId;
-                 Minecraft.getInstance().execute(() -> {
-                     startEffect(entityRef, effectIdRef);
-                 });
+                 // Only start if Paused is FALSE.
+                 // This prevents auto-start on form load if Paused is enabled.
+                 // It also prevents looping if Paused is enabled.
+                 if (!form.paused.get()) {
+                     lastAttemptTime = now;
+                     
+                     // If switching effects or restarting, stop previous just in case
+                     if (currentEffect != null) stopCurrentEffect();
+                     
+                     // Schedule start on main thread to avoid concurrency issues
+                     final IEntity entityRef = iEntity;
+                     final String effectIdRef = effectId;
+                     Minecraft.getInstance().execute(() -> {
+                         startEffect(entityRef, effectIdRef);
+                     });
+                 }
              }
         }
 
@@ -291,6 +311,9 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                      root.updatePos(new Vector3f((float) finalX, (float) finalY, (float) finalZ));
                      root.updateRotation(finalRot);
                      root.updateScale(finalScale);
+                     
+                     // Manual interpolation update since we removed it from CACHE
+                     currentEffect.updateFXObjectFrame(root, context.transition);
                 }
             } catch (Exception e) {
                 // Prevent render crash
@@ -414,6 +437,11 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             if (fx != null) {
                 currentEffect = new EntityEffectExecutor(fx, dummyEntity.level(), dummyEntity, EntityEffectExecutor.AutoRotate.NONE);
                 currentEffect.start();
+                
+                // IMPORTANT: We do NOT remove from global CACHE anymore.
+                // This allows Photon to tick the effect normally.
+                // "Paused" functionality is now "No Loop" (Play Once).
+
                 if (!activeRenderers.contains(this)) {
                     activeRenderers.add(this);
                 }
