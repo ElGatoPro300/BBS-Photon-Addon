@@ -28,7 +28,7 @@ public class BBSPhoton {
             // Manual registration fallback (in case EventBus event was missed)
             if (BBS.getForms() != null) {
                 LOGGER.info("Attempting manual registration of PhotonForm...");
-                BBS.getForms().register(mchorse.bbs_mod.resources.Link.create("bbs_photon:photon"), com.elgatopro300.bbsphoton.forms.PhotonForm.class);
+                BBS.getForms().register(mchorse.bbs_mod.resources.Link.create("bbs:photon"), com.elgatopro300.bbsphoton.forms.PhotonForm.class);
                 LOGGER.info("Manually registered PhotonForm to BBS FactoryForms");
             } else {
                 LOGGER.warn("BBS FactoryForms is null during construction, skipping manual registration");
@@ -47,7 +47,7 @@ public class BBSPhoton {
         try {
             if (BBS.getForms() != null) {
                 LOGGER.info("Attempting manual registration of PhotonForm in commonSetup...");
-                BBS.getForms().register(mchorse.bbs_mod.resources.Link.create("bbs_photon:photon"), com.elgatopro300.bbsphoton.forms.PhotonForm.class);
+                BBS.getForms().register(mchorse.bbs_mod.resources.Link.create("bbs:photon"), com.elgatopro300.bbsphoton.forms.PhotonForm.class);
                 LOGGER.info("Manually registered PhotonForm to BBS FactoryForms in commonSetup");
             } else {
                 LOGGER.warn("BBS FactoryForms is still null in commonSetup!");

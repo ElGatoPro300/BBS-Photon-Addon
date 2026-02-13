@@ -21,7 +21,7 @@ public class BBSPhotonAddon extends BBSAddon {
     @Subscribe
     public void registerForms(RegisterFormsEvent event) {
         LOGGER.info("Registering Photon form...");
-        event.getForms().register(Link.create("bbs_photon:photon"), PhotonForm.class);
-        LOGGER.info("Registered Photon form: " + Link.create("bbs_photon:photon"));
+        event.getForms().register(Link.create("bbs:photon"), PhotonForm.class);
+        LOGGER.info("Registered Photon form: " + Link.create("bbs:photon"));
     }
 }

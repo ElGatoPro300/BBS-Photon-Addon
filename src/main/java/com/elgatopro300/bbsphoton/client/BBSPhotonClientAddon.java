@@ -43,6 +43,6 @@ public class BBSPhotonClientAddon extends BBSClientAddon {
     public void registerIcons(RegisterIconsEvent event) {
         LOGGER.info("Registering Photon form icon...");
         // Updated to match actual icon size (96x96)
-        event.register(new Icon(PhotonFormRenderer.ICON, "bbs_photon:photon", 0, 0, 40, 40, 40, 40));
+        event.register(new Icon(PhotonFormRenderer.ICON, "bbs:photon", 0, 0, 40, 40, 40, 40));
     }
 }
