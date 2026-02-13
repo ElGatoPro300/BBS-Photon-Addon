@@ -4,6 +4,8 @@ import com.elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBS;
 import mchorse.bbs_mod.BBSModClient;
+import mchorse.bbs_mod.addons.AddonInfo;
+import mchorse.bbs_mod.resources.Link;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import org.slf4j.Logger;
@@ -60,7 +62,29 @@ public class BBSPhotonClient {
 
                 // Register source pack for bbs_photon namespace
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonClient.class));
+                BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon_icons", "assets", BBSPhotonClient.class));
                 LOGGER.info("Registered 'bbs_photon' source pack.");
+
+                // Manual registration for Addons Panel (Fix for Sinytra/Connector)
+                try {
+                     Link iconLink = new Link("bbs_photon_icons", "bbs_photon/icon.png");
+                     
+                     AddonInfo info = new AddonInfo(
+                        "bbs-photon-addon", 
+                        "BBS Photon Addon", 
+                        "1.0.0", 
+                        "Integration between BBS and Photon particle engine.", 
+                        java.util.List.of("ElGatoPro300"), 
+                        iconLink, 
+                        "https://example.com", 
+                        "https://github.com/Extra/bbs-photon-addon/issues", 
+                        "https://github.com/Extra/bbs-photon-addon"
+                     );
+                     BBSModClient.registerAddon(info);
+                     LOGGER.info("Manually registered BBS Photon Addon to BBS Addons Panel.");
+                } catch (Exception e) {
+                    LOGGER.error("Failed to manually register addon info", e);
+                }
 
                 // Verify icon resource existence
                 try {

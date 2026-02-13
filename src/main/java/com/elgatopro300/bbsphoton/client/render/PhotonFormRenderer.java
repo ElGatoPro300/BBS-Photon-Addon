@@ -14,6 +14,7 @@ import mchorse.bbs_mod.resources.Link;
 import java.lang.reflect.Method;
 import mchorse.bbs_mod.utils.pose.Transform;
 import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -21,6 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.joml.Matrix4f;
 
 import net.minecraft.util.Mth;
 
@@ -125,28 +127,76 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     // Not an MCEntity or method not found
                 }
 
-                // Calculate transform
-                Transform t = form.transform.get();
-                Vector3f tPos = t.translate;
-                Vector3f tRot = t.rotate;
-                Vector3f tScale = t.scale;
+                // Calculate transform using PoseStack (handles both Model Block and Form transforms)
+                PoseStack stack = null;
+                try {
+                    stack = (PoseStack) context.getClass().getField("stack").get(context);
+                } catch (Exception e) {
+                    // Ignore reflection error
+                }
+                
+                double finalX, finalY, finalZ;
+                Quaternionf finalRot;
+                Vector3f finalScale = new Vector3f(1.0f, 1.0f, 1.0f);
 
-                // Calculate rotation
-                Quaternionf entityRot = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
-                Quaternionf formRot = new Quaternionf()
-                    .rotateZ((float) Math.toRadians(tRot.z))
-                    .rotateY((float) Math.toRadians(tRot.y))
-                    .rotateX((float) Math.toRadians(tRot.x));
+                if (stack != null) {
+                    var matrix = new Matrix4f(stack.last().pose());
+                    
+                    Transform t = form.transform.get();
+                    Vector3f tPos = t.translate;
+                    Vector3f tRot = t.rotate;
+                    Vector3f tScale = t.scale;
 
-                Quaternionf finalRot = new Quaternionf(entityRot).mul(formRot);
-
-                // Calculate position with offset
-                Vector3f offset = new Vector3f(tPos);
-                entityRot.transform(offset);
-
-                double finalX = x + offset.x;
-                double finalY = y + offset.y;
-                double finalZ = z + offset.z;
+                    matrix.translate(tPos);
+                    matrix.rotate(new Quaternionf()
+                        .rotateZ((float) Math.toRadians(tRot.z))
+                        .rotateY((float) Math.toRadians(tRot.y))
+                        .rotateX((float) Math.toRadians(tRot.x)));
+                    matrix.scale(tScale);
+                    
+                    // Extract translation
+                    Vector3f trans = new Vector3f();
+                    matrix.getTranslation(trans); // relative to camera
+                    
+                    // Get camera pos
+                    Vec3 cameraPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                    
+                    // Absolute position
+                    finalX = trans.x + cameraPos.x;
+                    finalY = trans.y + cameraPos.y;
+                    finalZ = trans.z + cameraPos.z;
+                    
+                    // Extract rotation
+                    finalRot = new Quaternionf();
+                    matrix.getUnnormalizedRotation(finalRot);
+                    
+                    // Extract scale
+                    matrix.getScale(finalScale);
+                } else {
+                    // Fallback to manual calculation if stack is missing
+                    Transform t = form.transform.get();
+                    Vector3f tPos = t.translate;
+                    Vector3f tRot = t.rotate;
+                    Vector3f tScale = t.scale;
+                    finalScale = tScale;
+    
+                    // Calculate rotation
+                    Quaternionf entityRot = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
+                    Quaternionf formRot = new Quaternionf()
+                        .rotateZ((float) Math.toRadians(tRot.z))
+                        .rotateY((float) Math.toRadians(tRot.y))
+                        .rotateX((float) Math.toRadians(tRot.x));
+    
+                    finalRot = new Quaternionf(entityRot).mul(formRot);
+    
+                    // Calculate position with offset
+                    Vector3f offset = new Vector3f(tPos);
+                    entityRot.transform(offset);
+    
+                    finalX = x + offset.x;
+                    finalY = y + offset.y;
+                    finalZ = z + offset.z;
+                }
 
                 // Update dummy entity position if it exists
                 // IMPORTANT: We must update the dummy entity to the OFFSET position so EntityEffectExecutor
@@ -180,7 +230,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 if (root != null) {
                      root.updatePos(new Vector3f((float) finalX, (float) finalY, (float) finalZ));
                      root.updateRotation(finalRot);
-                     root.updateScale(tScale);
+                     root.updateScale(finalScale);
                 }
             } catch (Exception e) {
                 // Prevent render crash
