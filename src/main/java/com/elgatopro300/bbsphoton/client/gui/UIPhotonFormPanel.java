@@ -23,13 +23,10 @@ import java.util.List;
 
 public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
     public UIButton pickEffect;
-    public UITextbox effect;
+    // public UITextbox effect; // Removed name bar as requested
     
     public UIToggle paused;
-    public UITrackpad user1;
-    public UITrackpad user2;
-    public UITrackpad user3;
-    public UITrackpad user4;
+    public UITrackpad speed;
 
     private List<String> cachedEffects;
 
@@ -38,41 +35,27 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
 
         this.pickEffect = new UIButton(IKey.raw("Pick Photon Effect"), (b) -> this.openPicker());
         
-        this.effect = new UITextbox(1000, (t) -> {
-            if (this.form != null) this.form.effect.set(t);
-        });
-        this.effect.tooltip(IKey.raw("Photon Effect ID (e.g. photon:effect_name)"));
+        // Remove textbox
+        // this.effect = new UITextbox(1000, (t) -> {
+        //     if (this.form != null) this.form.effect.set(t);
+        // });
+        // this.effect.tooltip(IKey.raw("Photon Effect ID (e.g. photon:effect_name)"));
         
         this.paused = new UIToggle(IKey.raw("Paused"), (b) -> {
             if (this.form != null) this.form.paused.set(b.getValue());
         });
         
-        this.user1 = new UITrackpad((v) -> {
-            if (this.form != null) this.form.user1.set(v.floatValue());
+        this.speed = new UITrackpad((v) -> {
+            if (this.form != null) this.form.speed.set(v.floatValue());
         });
-        this.user2 = new UITrackpad((v) -> {
-            if (this.form != null) this.form.user2.set(v.floatValue());
-        });
-        this.user3 = new UITrackpad((v) -> {
-            if (this.form != null) this.form.user3.set(v.floatValue());
-        });
-        this.user4 = new UITrackpad((v) -> {
-            if (this.form != null) this.form.user4.set(v.floatValue());
-        });
-        
-        this.user1.tooltip(IKey.raw("User Variable 1"));
-        this.user2.tooltip(IKey.raw("User Variable 2"));
-        this.user3.tooltip(IKey.raw("User Variable 3"));
-        this.user4.tooltip(IKey.raw("User Variable 4"));
+        this.speed.tooltip(IKey.raw("Simulation Speed"));
 
-        this.options.add(this.pickEffect.marginTop(6), this.effect);
+        this.options.add(this.pickEffect.marginTop(6));
+        // this.options.add(this.effect); // Removed
+        
         this.options.add(this.paused.marginTop(6));
         
-        this.options.add(UI.label(IKey.raw("General Configuration")).marginTop(12));
-        this.options.add(UI.label(IKey.raw("User 1")), this.user1);
-        this.options.add(UI.label(IKey.raw("User 2")), this.user2);
-        this.options.add(UI.label(IKey.raw("User 3")), this.user3);
-        this.options.add(UI.label(IKey.raw("User 4")), this.user4);
+        this.options.add(UI.label(IKey.raw("Speed")).marginTop(12), this.speed);
     }
     
     private void openPicker() {
@@ -82,12 +65,27 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
         }
         
         UIListOverlayPanel panel = new UIListOverlayPanel(IKey.raw("Select Photon Effect"), (str) -> {
-            this.effect.setText(str);
+            // this.effect.setText(str);
+            this.pickEffect.label = IKey.raw(str); // Update button label to show selection
             if (this.form != null) this.form.effect.set(str);
         });
         
         panel.addValues(this.cachedEffects);
         UIOverlay.addOverlay(this.getContext(), panel, 0.5F, 0.7F);
+    }
+    
+    @Override
+    public void startEdit(PhotonForm form) {
+        super.startEdit(form);
+        
+        // this.effect.setText(form.effect.get());
+        if (!form.effect.get().isEmpty()) {
+            this.pickEffect.label = IKey.raw(form.effect.get());
+        } else {
+            this.pickEffect.label = IKey.raw("Pick Photon Effect");
+        }
+        this.paused.setValue(form.paused.get());
+        this.speed.setValue(form.speed.get());
     }
     
     private void populateEffects(List<String> list) {
@@ -151,16 +149,6 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm> {
         Collections.sort(list);
     }
 
-    @Override
-    public void startEdit(PhotonForm form) {
-        super.startEdit(form);
+    // End of file
 
-        this.effect.setText(form.effect.get());
-        this.paused.setValue(form.paused.get());
-        
-        this.user1.setValue(form.user1.get());
-        this.user2.setValue(form.user2.get());
-        this.user3.setValue(form.user3.get());
-        this.user4.setValue(form.user4.get());
-    }
 }
