@@ -2,6 +2,7 @@ package com.elgatopro300.bbsphoton.client.gui;
 
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBSMod;
+import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.l10n.keys.IKey;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.forms.editors.forms.UIForm;
@@ -29,9 +30,9 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
     {
         super(editor);
 
-        this.pickEffect = new UIButton(IKey.raw("Pick Photon Effect"), (b) -> this.openPicker());
+        this.pickEffect = new UIButton(L10n.lang("bbs_photon.ui.pick_effect"), (b) -> this.openPicker());
         
-        this.paused = new UIToggle(IKey.raw("Paused"), (b) ->
+        this.paused = new UIToggle(L10n.lang("bbs_photon.ui.paused"), (b) ->
         {
             if (this.form != null)
             {
@@ -51,7 +52,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
             this.populateEffects(this.cachedEffects);
         }
         
-        UIListOverlayPanel panel = new UIListOverlayPanel(IKey.raw("Select Photon Effect"), (str) ->
+        UIListOverlayPanel panel = new UIListOverlayPanel(L10n.lang("bbs_photon.ui.select_effect"), (str) ->
         {
             if (this.form != null)
             {
@@ -68,8 +69,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
     {
         super.startEdit(form);
         
-        /* Always keep the static label as requested */
-        this.pickEffect.label = IKey.raw("Pick Photon Effect");
+        this.pickEffect.label = L10n.lang("bbs_photon.ui.pick_effect");
         
         this.paused.setValue(form.paused.get());
     }

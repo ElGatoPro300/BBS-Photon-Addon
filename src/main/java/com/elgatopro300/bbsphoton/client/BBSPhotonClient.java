@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import mchorse.bbs_mod.BBSMod;
+import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
 
 import com.elgatopro300.bbsphoton.client.gui.UIPhotonForm;
@@ -79,6 +80,21 @@ public class BBSPhotonClient
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonClient.class));
                 BBSMod.getProvider().register(new InternalAssetsSourcePack("bbs_photon_icons", "assets", BBSPhotonClient.class));
                 LOGGER.info("Registered 'bbs_photon' source pack.");
+
+                /* Register L10n links directly and reload after packs are in place */
+                try
+                {
+                    BBSModClient.getL10n().register((lang) -> java.util.List.of(
+                        new Link("bbs_photon", "strings/" + L10n.DEFAULT_LANGUAGE + ".json"),
+                        new Link("bbs_photon", "strings/" + lang + ".json")
+                    ));
+                    BBSModClient.getL10n().reload();
+                    LOGGER.info("Registered and reloaded BBS L10n for bbs_photon.");
+                }
+                catch (Exception e)
+                {
+                    LOGGER.error("Failed to register/reload L10n", e);
+                }
 
                 /* Manual registration for Addons Panel (Fix for Sinytra/Connector) */
                 try
