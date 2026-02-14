@@ -61,8 +61,10 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     public boolean checkCleanup()
     {
         /* Timeout reduced to 100ms (2 ticks) to ensure quick cleanup when switching panels
-         * This prevents particle duplication when entering/exiting the Form Editor */
-        if (this.currentEffect != null && System.currentTimeMillis() - this.lastRenderTime > 100)
+         * This prevents particle duplication when entering/exiting the Form Editor.
+         * We check stagnation regardless of whether currentEffect is null to prevent
+         * leaking PhotonFormRenderer instances in activeRenderers. */
+        if (System.currentTimeMillis() - this.lastRenderTime > 100)
         {
             this.stopCurrentEffect();
             
@@ -493,18 +495,36 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     {
         if (this.currentEffect != null)
         {
-            final EntityEffectExecutor effectToDestroy = this.currentEffect;
             final String idToLog = this.lastEffectId;
-
-            /* Schedule destruction to avoid ConcurrentModificationException if Photon is iterating */
+            final com.lowdragmc.photon.client.fx.EntityEffectExecutor effectToRemove = this.currentEffect;
+            final Entity entityToRemove = this.dummyEntity;
+            
             Minecraft.getInstance().execute(() ->
             {
+                System.out.println("BBSPhoton: Stopping effect " + idToLog);
                 try
                 {
-                    if (effectToDestroy.getRuntime() != null)
+                    /* Force destroy the runtime */
+                    if (effectToRemove.getRuntime() != null)
                     {
-                        System.out.println("BBSPhoton: Stopping effect (scheduled) " + idToLog);
-                        effectToDestroy.getRuntime().destroy(false);
+                        effectToRemove.getRuntime().destroy(true);
+                    }
+                    
+                    /* Force remove from CACHE explicitly to ensure it stops ticking
+                     * This is a failsafe in case the entity death check is delayed or fails */
+                    if (entityToRemove != null)
+                    {
+                        java.util.List<com.lowdragmc.photon.client.fx.EntityEffectExecutor> executors = 
+                            com.lowdragmc.photon.client.fx.EntityEffectExecutor.CACHE.get(entityToRemove);
+                        
+                        if (executors != null)
+                        {
+                            executors.remove(effectToRemove);
+                            if (executors.isEmpty())
+                            {
+                                com.lowdragmc.photon.client.fx.EntityEffectExecutor.CACHE.remove(entityToRemove);
+                            }
+                        }
                     }
                 }
                 catch (Exception e)
@@ -521,10 +541,23 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             {
                 System.out.println("BBSPhoton: Removing dummy entity " + this.dummyEntity.getId());
                 this.dummyEntity.remove(Entity.RemovalReason.DISCARDED);
+                
+                /* Double check: remove from client world list if possible */
+                if (this.dummyEntity.level() instanceof net.minecraft.client.multiplayer.ClientLevel)
+                {
+                    net.minecraft.client.multiplayer.ClientLevel clientWorld = (net.minecraft.client.multiplayer.ClientLevel) this.dummyEntity.level();
+                    clientWorld.removeEntity(this.dummyEntity.getId(), Entity.RemovalReason.DISCARDED);
+                }
+                
                 this.dummyEntity = null;
             }
             
             activeRenderers.remove(this);
+        }
+        else
+        {
+             /* Even if currentEffect is null, ensure we are removed from activeRenderers */
+             activeRenderers.remove(this);
         }
     }
 
@@ -641,22 +674,18 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         }
         
         @Override
-        public void updateFXObjectTick(IFXObject root)
+        public void updateFXObjectTick(IFXObject fxObject)
         {
+            /* Restore super call to ensure entity death checks are performed.
+             * EntityEffectExecutor.updateFXObjectTick checks if entity is alive,
+             * and if not, destroys the effect and removes it from CACHE.
+             * This is critical to prevent "zombie" effects when dummyEntity is removed. */
+            super.updateFXObjectTick(fxObject);
+            
             if (!this.paused)
             {
-                /* Do NOT call super.updateFXObjectTick(root) because it kills the effect if the entity is dead!
-                 * We handle entity death manually in render3D.
-                 * super.updateFXObjectTick(root); */
+                /* We track tick time for stagnation detection */
                 this.lastTick = System.currentTimeMillis();
-            }
-            else
-            {
-                if (System.currentTimeMillis() - this.lastTick > 1000)
-                {
-                     System.out.println("BBSPhoton: Effect Paused. Root: " + root);
-                     this.lastTick = System.currentTimeMillis();
-                 }
             }
         }
 
