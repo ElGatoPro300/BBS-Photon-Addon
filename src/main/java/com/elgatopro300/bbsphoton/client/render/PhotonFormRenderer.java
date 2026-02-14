@@ -301,57 +301,53 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     /* 1. Check 'ui' field */
                     try
                     {
-                        isUI = context.getClass().getField("ui").getBoolean(context);
+                        java.lang.reflect.Field uiField = context.getClass().getField("ui");
+                        isUI = uiField.getBoolean(context);
                     }
                     catch (Exception e)
                     {
-                        /* If field not found, assume false or try method */
+                        /* Ignore */
                     }
-                    
-                    /* 2. Check 'type' field (FormRenderType) as backup */
-                    if (!isUI)
+
+                    /* 2. Get stack */
+                    try
                     {
-                        try
-                        {
-                            Object typeObj = context.getClass().getField("type").get(context);
-                            
-                            if (typeObj != null)
-                            {
-                                String typeName = typeObj.toString();
-                                /* PREVIEW = Form Editor
-                                 * ITEM_INVENTORY = Inventory */
-                                if (typeName.contains("PREVIEW") || typeName.contains("INVENTORY") || typeName.contains("GUI"))
-                                {
-                                    isUI = true;
-                                }
-                            }
-                        }
-                        catch (Exception e) {}
+                        java.lang.reflect.Field stackField = context.getClass().getField("stack");
+                        stack = (PoseStack) stackField.get(context);
                     }
-                    
-                    /* Only try to get stack if not in UI (UI stack is in screen coords, causes massive offsets) */
-                    if (!isUI)
+                    catch (Exception e)
                     {
-                        stack = (PoseStack) context.getClass().getField("stack").get(context);
+                         /* Ignore */
                     }
                 }
                 catch (Exception e)
                 {
-                    /* Ignore reflection error */
+                    /* Ignore */
                 }
-                
+
                 double finalX, finalY, finalZ;
                 Quaternionf finalRot;
                 Vector3f finalScale = new Vector3f(1.0f, 1.0f, 1.0f);
 
                 if (stack != null)
                 {
-                    Matrix4f matrix = new Matrix4f(stack.last().pose());
+                    /* Extract matrix from PoseStack */
+                    /* Reflection to get 'pose' from PoseStack.last() */
+                    Object last = stack.getClass().getMethod("last").invoke(stack);
+                    org.joml.Matrix4f pose = (org.joml.Matrix4f) last.getClass().getMethod("pose").invoke(last);
+                    
+                    /* Copy matrix to avoid modifying original stack state for subsequent renders */
+                    org.joml.Matrix4f matrix = new org.joml.Matrix4f(pose);
                     
                     Transform t = this.form.transform.get();
                     Vector3f tPos = t.translate;
                     Vector3f tRot = t.rotate;
                     Vector3f tScale = t.scale;
+
+                    if (isUI)
+                    {
+                        // System.out.println("BBSPhoton DEBUG: UI Render. Offset: " + tPos + " Scale: " + tScale);
+                    }
 
                     matrix.translate(tPos);
                     matrix.rotate(new Quaternionf()
@@ -362,15 +358,66 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     
                     /* Extract translation */
                     Vector3f trans = new Vector3f();
-                    matrix.getTranslation(trans); /* relative to camera */
+                    matrix.getTranslation(trans); /* relative to camera/view */
                     
-                    /* Get camera pos */
-                    Vec3 cameraPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                    
-                    /* Absolute position */
-                    finalX = trans.x + cameraPos.x;
-                    finalY = trans.y + cameraPos.y;
-                    finalZ = trans.z + cameraPos.z;
+                    /* Calculate absolute position based on context */
+                    boolean isEditor = false;
+                    try { isEditor = context.ui || context.modelRenderer; } catch (Exception e) {}
+
+                    if (isEditor)
+                    {
+                        /* In Editor/UI, we want the particle to appear at the same Screen Position/View Position
+                         * as it does in the Editor, but rendered by Photon which uses the MC Main Camera.
+                         * 
+                         * 'trans' is the position in Editor View Space (relative to Editor Camera).
+                         * We want P_world such that: View_MC * P_world = trans.
+                         * So P_world = Inv(View_MC) * trans.
+                         * View_MC = Rot_MC * T(-CamPos_MC).
+                         * Inv(View_MC) = T(CamPos_MC) * Inv(Rot_MC).
+                         * 
+                         * So P_world = CamPos_MC + (Inv(Rot_MC) * trans).
+                         */
+                        try
+                        {
+                            net.minecraft.client.Camera mcCam = Minecraft.getInstance().gameRenderer.getMainCamera();
+                            
+                            /* 1. Get Inverse Rotation of MC Camera */
+                            Matrix4f invMcRot = new Matrix4f();
+                            invMcRot.rotation(mcCam.rotation());
+                            invMcRot.invert();
+                            
+                            /* 2. Transform 'trans' (View Space) by Inverse Rotation */
+                            Vector3f worldRel = new Vector3f(trans);
+                            invMcRot.transformPosition(worldRel);
+                            
+                            /* 3. Add MC Camera Position */
+                            Vec3 mcPos = mcCam.getPosition();
+                            finalX = worldRel.x + mcPos.x;
+                            finalY = worldRel.y + mcPos.y;
+                            finalZ = worldRel.z + mcPos.z;
+                        }
+                        catch (Exception e)
+                        {
+                            System.out.println("BBSPhoton: Error calculating Editor position: " + e.getMessage());
+                            /* Fallback */
+                            Vec3 mcPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                            finalX = trans.x + mcPos.x;
+                            finalY = trans.y + mcPos.y;
+                            finalZ = trans.z + mcPos.z;
+                        }
+                    }
+                    else
+                    {
+                        /* In World Rendering, PoseStack is usually just Translation(-CamPos).
+                         * It does NOT include Camera Rotation.
+                         * So 'trans' is (WorldPos - CamPos).
+                         * So WorldPos = trans + CamPos. */
+                         
+                        Vec3 mcPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                        finalX = trans.x + mcPos.x;
+                        finalY = trans.y + mcPos.y;
+                        finalZ = trans.z + mcPos.z;
+                    }
                     
                     /* Extract rotation */
                     finalRot = new Quaternionf();
