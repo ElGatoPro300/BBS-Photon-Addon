@@ -3,7 +3,6 @@ package com.elgatopro300.bbsphoton.client.gui;
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.l10n.L10n;
-import mchorse.bbs_mod.l10n.keys.IKey;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.forms.editors.forms.UIForm;
 import mchorse.bbs_mod.ui.forms.editors.panels.UIFormPanel;

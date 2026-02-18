@@ -21,7 +21,7 @@ side="BOTH"
 [[dependencies.bbs_photon_addon]]
 modId="minecraft"
 type="required"
-versionRange="[1.21.1,1.22)"
+versionRange="[1.21.1,)"
 ordering="NONE"
 side="BOTH"
 
@@ -35,7 +35,7 @@ side="BOTH"
 [[dependencies.bbs_photon_addon]]
 modId="bbs"
 type="required"
-versionRange="[1.8.0,)"
+versionRange="[1.9.0,)"
 ordering="NONE"
 side="BOTH"
 

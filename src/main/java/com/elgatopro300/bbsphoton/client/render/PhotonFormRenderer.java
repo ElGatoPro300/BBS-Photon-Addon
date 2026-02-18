@@ -1,9 +1,11 @@
 package com.elgatopro300.bbsphoton.client.render;
 
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
 import com.lowdragmc.photon.client.fx.FXHelper;
 import com.lowdragmc.photon.client.fx.FX;
+import com.lowdragmc.photon.client.fx.FXRuntime;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
 import mchorse.bbs_mod.forms.entities.IEntity;
 import mchorse.bbs_mod.forms.renderers.FormRenderer;
@@ -14,22 +16,29 @@ import mchorse.bbs_mod.graphics.texture.Texture;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.utils.pose.Transform;
 import net.minecraft.client.Minecraft;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Camera;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Matrix4f;
-
-import net.minecraft.util.Mth;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.lang.reflect.Field;
+import java.util.List;
+
 
 public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITickable
 {
@@ -93,12 +102,12 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         {
             /* Use reflection to check if we are in a dashboard and if the film runner is paused
              * This avoids compilation errors with mapped/unmapped class names and private fields */
-            net.minecraft.client.gui.screens.Screen screen = Minecraft.getInstance().screen;
+            Screen screen = Minecraft.getInstance().screen;
             
             if (screen != null && screen.getClass().getSimpleName().contains("UIDashboard"))
             {
                 /* Find 'panels' field */
-                java.lang.reflect.Field panelsField = null;
+                Field panelsField = null;
                 Class<?> clazz = screen.getClass();
                 
                 while (clazz != null && panelsField == null)
@@ -116,7 +125,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                         if (panel.getClass().getSimpleName().contains("UIFilmPanel"))
                         {
                             /* Check runner paused state via reflection */
-                            java.lang.reflect.Field runnerField = panel.getClass().getDeclaredField("runner");
+                            Field runnerField = panel.getClass().getDeclaredField("runner");
                             runnerField.setAccessible(true);
                             Object runner = runnerField.get(panel);
                             
@@ -241,7 +250,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 /* Always reset delay to 0 in render3D to ensure the global render loop can render the effect.
                  * The "Pause" logic (stopping the tick) is handled in PausableEntityEffectExecutor.updateFXObjectFrame
                  * by setting delay to > 0 after the render setup but before the next tick. */
-                com.lowdragmc.photon.client.fx.FXRuntime runtime = this.currentEffect.getRuntime();
+                FXRuntime runtime = this.currentEffect.getRuntime();
                 
                 if (runtime != null)
                 {
@@ -301,7 +310,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     /* 1. Check 'ui' field */
                     try
                     {
-                        java.lang.reflect.Field uiField = context.getClass().getField("ui");
+                        Field uiField = context.getClass().getField("ui");
                         isUI = uiField.getBoolean(context);
                     }
                     catch (Exception e)
@@ -312,7 +321,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     /* 2. Get stack */
                     try
                     {
-                        java.lang.reflect.Field stackField = context.getClass().getField("stack");
+                        Field stackField = context.getClass().getField("stack");
                         stack = (PoseStack) stackField.get(context);
                     }
                     catch (Exception e)
@@ -332,9 +341,9 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 if (stack != null)
                 {
                     Object last = stack.getClass().getMethod("last").invoke(stack);
-                    org.joml.Matrix4f pose = (org.joml.Matrix4f) last.getClass().getMethod("pose").invoke(last);
+                    Matrix4f pose = (Matrix4f) last.getClass().getMethod("pose").invoke(last);
 
-                    org.joml.Matrix4f matrix;
+                    Matrix4f matrix;
 
                     try
                     {
@@ -342,7 +351,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
                         try
                         {
-                            java.lang.reflect.Field typeField = context.getClass().getField("type");
+                            Field typeField = context.getClass().getField("type");
                             Object typeObj = typeField.get(context);
 
                             if (typeObj != null)
@@ -361,18 +370,18 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
                         if (isPreview)
                         {
-                            net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
-                            matrix = new org.joml.Matrix4f().rotation(cam.rotation());
+                            Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+                            matrix = new Matrix4f().rotation(cam.rotation());
                             matrix.mul(pose);
                         }
                         else
                         {
-                            matrix = new org.joml.Matrix4f(pose);
+                            matrix = new Matrix4f(pose);
                         }
                     }
                     catch (Exception e)
                     {
-                        matrix = new org.joml.Matrix4f(pose);
+                        matrix = new Matrix4f(pose);
                     }
 
                     Transform t = this.form.transform.get();
@@ -517,7 +526,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         if (this.currentEffect != null)
         {
             final String idToLog = this.lastEffectId;
-            final com.lowdragmc.photon.client.fx.EntityEffectExecutor effectToRemove = this.currentEffect;
+            final EntityEffectExecutor effectToRemove = this.currentEffect;
             final Entity entityToRemove = this.dummyEntity;
             
             Minecraft.getInstance().execute(() ->
@@ -535,15 +544,15 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                      * This is a failsafe in case the entity death check is delayed or fails */
                     if (entityToRemove != null)
                     {
-                        java.util.List<com.lowdragmc.photon.client.fx.EntityEffectExecutor> executors = 
-                            com.lowdragmc.photon.client.fx.EntityEffectExecutor.CACHE.get(entityToRemove);
+                        List<EntityEffectExecutor> executors = 
+                            EntityEffectExecutor.CACHE.get(entityToRemove);
                         
                         if (executors != null)
                         {
                             executors.remove(effectToRemove);
                             if (executors.isEmpty())
                             {
-                                com.lowdragmc.photon.client.fx.EntityEffectExecutor.CACHE.remove(entityToRemove);
+                                EntityEffectExecutor.CACHE.remove(entityToRemove);
                             }
                         }
                     }
@@ -564,9 +573,9 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 this.dummyEntity.remove(Entity.RemovalReason.DISCARDED);
                 
                 /* Double check: remove from client world list if possible */
-                if (this.dummyEntity.level() instanceof net.minecraft.client.multiplayer.ClientLevel)
+                if (this.dummyEntity.level() instanceof ClientLevel)
                 {
-                    net.minecraft.client.multiplayer.ClientLevel clientWorld = (net.minecraft.client.multiplayer.ClientLevel) this.dummyEntity.level();
+                    ClientLevel clientWorld = (ClientLevel) this.dummyEntity.level();
                     clientWorld.removeEntity(this.dummyEntity.getId(), Entity.RemovalReason.DISCARDED);
                 }
                 
@@ -621,7 +630,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                  * Some UI worlds might not support adding entities normally?
                  * But Photon needs the entity to be in the world's entity list to find it? */
                 
-                this.dummyEntity = new net.minecraft.world.entity.decoration.ArmorStand(world, iEntity.getX(), iEntity.getY(), iEntity.getZ());
+                this.dummyEntity = new ArmorStand(world, iEntity.getX(), iEntity.getY(), iEntity.getZ());
                 this.dummyEntity.setInvisible(true);
                 this.dummyEntity.setNoGravity(true);
                 this.dummyEntity.setInvulnerable(true);
@@ -630,9 +639,9 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 
                 /* Add to world to ensure Photon can find/update it
                  * ONLY if it's not already added (check by ID or existence) */
-                if (world instanceof net.minecraft.client.multiplayer.ClientLevel)
+                if (world instanceof ClientLevel)
                 {
-                    net.minecraft.client.multiplayer.ClientLevel clientWorld = (net.minecraft.client.multiplayer.ClientLevel) world;
+                    ClientLevel clientWorld = (ClientLevel) world;
                     
                     if (clientWorld.getEntity(this.dummyEntity.getId()) == null)
                     {
@@ -718,7 +727,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
              * The render3D() method will reset delay to 0 before the next render pass. */
             if (this.paused && this.getRuntime() != null && fxObject == this.getRuntime().getRoot())
             {
-                 com.lowdragmc.photon.client.fx.FXRuntime rt = this.getRuntime();
+                 FXRuntime rt = this.getRuntime();
                  
                  for (IFXObject obj : rt.objects.values())
                  {
@@ -728,7 +737,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
             /* Override frame update to handle potentially dead entity gracefully
              * and ensure position updates correctly. */
-            com.lowdragmc.photon.client.fx.FXRuntime runtime = this.getRuntime();
+            FXRuntime runtime = this.getRuntime();
             
             if (runtime != null && fxObject == runtime.root)
             {
@@ -743,7 +752,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 Vec3 position = this.entity.position();
                 
                 /* Also apply offset */
-                runtime.root.updatePos(new org.joml.Vector3f((float) (position.x + this.offset.x), (float) (position.y + this.offset.y), (float) (position.z + this.offset.z)));
+                runtime.root.updatePos(new Vector3f((float) (position.x + this.offset.x), (float) (position.y + this.offset.y), (float) (position.z + this.offset.z)));
                 
                 if (this.autoRotate != AutoRotate.NONE)
                 {

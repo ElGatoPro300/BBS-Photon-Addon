@@ -1,22 +1,22 @@
 package com.elgatopro300.bbsphoton.client;
 
 import com.elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
+import com.elgatopro300.bbsphoton.client.gui.UIPhotonForm;
 import com.elgatopro300.bbsphoton.forms.PhotonForm;
-import mchorse.bbs_mod.BBS;
-import mchorse.bbs_mod.BBSModClient;
 import mchorse.bbs_mod.addons.AddonInfo;
+import mchorse.bbs_mod.BBS;
+import mchorse.bbs_mod.BBSMod;
+import mchorse.bbs_mod.BBSModClient;
+import mchorse.bbs_mod.forms.FormUtilsClient;
+import mchorse.bbs_mod.ui.forms.editors.UIFormEditor;
+import mchorse.bbs_mod.l10n.L10n;
+import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
 import mchorse.bbs_mod.resources.Link;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import mchorse.bbs_mod.BBSMod;
-import mchorse.bbs_mod.l10n.L10n;
-import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
-
-import com.elgatopro300.bbsphoton.client.gui.UIPhotonForm;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.io.InputStream;
@@ -66,9 +66,9 @@ public class BBSPhotonClient
                 {
                      LOGGER.info("Attempting manual registration of Photon renderers...");
                      /* Manually register renderer */
-                     mchorse.bbs_mod.forms.FormUtilsClient.register(PhotonForm.class, PhotonFormRenderer::new);
+                     FormUtilsClient.register(PhotonForm.class, PhotonFormRenderer::new);
                      /* Manually register panel */
-                     mchorse.bbs_mod.ui.forms.editors.UIFormEditor.register(PhotonForm.class, UIPhotonForm::new);
+                     UIFormEditor.register(PhotonForm.class, UIPhotonForm::new);
                      LOGGER.info("Manually registered PhotonForm renderers and panels");
                 }
                 catch (Exception e)
@@ -84,7 +84,7 @@ public class BBSPhotonClient
                 /* Register L10n links directly and reload after packs are in place */
                 try
                 {
-                    BBSModClient.getL10n().register((lang) -> java.util.List.of(
+                    BBSModClient.getL10n().register((lang) -> List.of(
                         new Link("bbs_photon", "strings/" + L10n.DEFAULT_LANGUAGE + ".json"),
                         new Link("bbs_photon", "strings/" + lang + ".json")
                     ));
@@ -106,7 +106,7 @@ public class BBSPhotonClient
                         "BBS Photon Addon", 
                         "1.0.0", 
                         "Integration between BBS and Photon particle engine.", 
-                        java.util.List.of("ElGatoPro300"), 
+                        List.of("ElGatoPro300"), 
                         iconLink, 
                         "https://discord.gg/MAHVQBSce6",
                         "",

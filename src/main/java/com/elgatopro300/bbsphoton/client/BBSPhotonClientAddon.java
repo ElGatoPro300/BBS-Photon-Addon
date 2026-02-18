@@ -13,8 +13,10 @@ import mchorse.bbs_mod.events.register.RegisterL10nEvent;
 import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.utils.icons.Icon;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.List;
 
 public class BBSPhotonClientAddon extends BBSClientAddon
 {
@@ -59,7 +61,7 @@ public class BBSPhotonClientAddon extends BBSClientAddon
     public void registerL10n(RegisterL10nEvent event)
     {
         LOGGER.info("Registering BBS L10n strings for bbs_photon...");
-        event.l10n.register((lang) -> java.util.List.of(
+        event.l10n.register((lang) -> List.of(
             new Link("bbs_photon", "strings/" + L10n.DEFAULT_LANGUAGE + ".json"),
             new Link("bbs_photon", "strings/" + lang + ".json")
         ));
