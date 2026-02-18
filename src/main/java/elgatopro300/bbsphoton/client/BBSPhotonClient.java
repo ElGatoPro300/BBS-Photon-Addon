@@ -1,8 +1,8 @@
-package com.elgatopro300.bbsphoton.client;
+package elgatopro300.bbsphoton.client;
 
-import com.elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
-import com.elgatopro300.bbsphoton.client.gui.UIPhotonForm;
-import com.elgatopro300.bbsphoton.forms.PhotonForm;
+import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
+import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.addons.AddonInfo;
 import mchorse.bbs_mod.BBS;
 import mchorse.bbs_mod.BBSMod;

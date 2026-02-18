@@ -1,6 +1,6 @@
-package com.elgatopro300.bbsphoton.client.render;
+package elgatopro300.bbsphoton.client.render;
 
-import com.elgatopro300.bbsphoton.forms.PhotonForm;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
 import com.lowdragmc.photon.client.fx.FXHelper;

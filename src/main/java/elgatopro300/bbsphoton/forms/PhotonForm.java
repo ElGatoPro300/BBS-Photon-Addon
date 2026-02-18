@@ -1,4 +1,4 @@
-package com.elgatopro300.bbsphoton.forms;
+package elgatopro300.bbsphoton.forms;
 
 import mchorse.bbs_mod.forms.forms.Form;
 import mchorse.bbs_mod.settings.values.core.ValueString;

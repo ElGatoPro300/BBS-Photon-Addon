@@ -1,6 +1,6 @@
-package com.elgatopro300.bbsphoton;
+package elgatopro300.bbsphoton;
 
-import com.elgatopro300.bbsphoton.forms.PhotonForm;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.addons.BBSAddon;
 import mchorse.bbs_mod.events.Subscribe;
 import mchorse.bbs_mod.events.register.RegisterFormsEvent;

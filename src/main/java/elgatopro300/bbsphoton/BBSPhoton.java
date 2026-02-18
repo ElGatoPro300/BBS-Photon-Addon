@@ -1,7 +1,7 @@
-package com.elgatopro300.bbsphoton;
+package elgatopro300.bbsphoton;
 
-import com.elgatopro300.bbsphoton.client.BBSPhotonClient;
-import com.elgatopro300.bbsphoton.forms.PhotonForm;
+import elgatopro300.bbsphoton.client.BBSPhotonClient;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBS;
 import mchorse.bbs_mod.resources.Link;
 import net.neoforged.api.distmarker.Dist;
