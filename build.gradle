@@ -23,10 +23,6 @@ repositories {
         name = "Sinytra"
         url = "https://maven.sinytra.org/"
     }
-    // maven {
-    //     name = "ParchmentMC"
-    //     url = "https://maven.parchmentmc.org"
-    // }
     maven {
         name = "LocalRepo"
         url = uri("repo")
@@ -38,11 +34,6 @@ repositories {
 
 neoForge {
     version = project.neoforge_version
-
-    // parchment {
-    //     mappingsVersion = '1.21-2024.06.23-1.21'
-    //     minecraftVersion = '1.21'
-    // }
 
     runs {
         client {
@@ -73,13 +64,9 @@ dependencies {
 	implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
 	implementation "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
 	implementation "maven.modrinth:watermedia:2.1.37"
+    implementation "maven.modrinth:bbs-cml-edition:1.9.2-1.21.1"
+    implementation "maven.modrinth:photon-editor:mc1.21.1-2.1.3.a-neoforge"
     
-    // Local jars
-    implementation name: 'photon'
-    implementation name: 'bbs-cml-edition' // Fabric mod, loaded via Connector
-    
-    // Additional Fabric deps if needed by BBS/Addon (loaded via FFAPI/Connector)
-    // implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-fabric" // Optional
 }
 
 tasks.withType(JavaCompile).configureEach {

@@ -110,7 +110,7 @@ public class BBSPhotonClient
                         iconLink, 
                         "https://discord.gg/MAHVQBSce6",
                         "",
-                        ""
+                        "https://github.com/ElGatoPro300/bbs-photon-addon"
                      );
                      BBSModClient.registerAddon(info);
                      LOGGER.info("Manually registered BBS Photon Addon to BBS Addons Panel.");

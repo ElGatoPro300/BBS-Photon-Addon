@@ -1,7 +1,7 @@
 modLoader="javafml"
 loaderVersion="[4,)"
 license="MIT"
-issueTrackerURL="https://github.com/Extra/bbs-photon-addon/issues"
+issueTrackerURL="https://github.com/ElGatoPro300/bbs-photon-addon"
 
 [[mods]]
 modId="bbs_photon_addon"
