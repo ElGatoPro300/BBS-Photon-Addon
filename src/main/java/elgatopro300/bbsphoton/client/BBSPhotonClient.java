@@ -55,6 +55,19 @@ public class BBSPhotonClient
             }
         });
 
+        ClientTickEvents.START_CLIENT_TICK.register(client ->
+        {
+            if (!PhotonFormRenderer.activeRenderers.isEmpty())
+            {
+                List<PhotonFormRenderer> renderers = new ArrayList<>(PhotonFormRenderer.activeRenderers);
+
+                for (PhotonFormRenderer renderer : renderers)
+                {
+                    renderer.onClientTickStart();
+                }
+            }
+        });
+
         /* Add PhotonForm to Extra category after the client has fully started
          * This ensures that BBSResources.init() has already run and we don't get overwritten */
         ClientLifecycleEvents.CLIENT_STARTED.register(client ->

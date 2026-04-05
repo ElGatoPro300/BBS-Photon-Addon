@@ -7,9 +7,11 @@ import com.lowdragmc.photon.client.fx.FXHelper;
 import com.lowdragmc.photon.client.fx.FX;
 import com.lowdragmc.photon.client.fx.FXRuntime;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
+import com.lowdragmc.photon.client.gameobject.emitter.Emitter;
 import mchorse.bbs_mod.forms.entities.IEntity;
 import mchorse.bbs_mod.forms.renderers.FormRenderer;
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
+import mchorse.bbs_mod.forms.renderers.FormRenderType;
 import mchorse.bbs_mod.forms.ITickable;
 import mchorse.bbs_mod.ui.framework.UIContext;
 import mchorse.bbs_mod.graphics.texture.Texture;
@@ -34,7 +36,9 @@ import org.joml.Matrix4f;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -58,6 +62,13 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     /* Watchdog to clean up effects when rendering stops (e.g. form closed) */
     private long lastRenderTime = 0;
     private long lastTickTime = 0;
+    private FormRenderType lastRenderType = null;
+    private int lastRenderTick = -1;
+    private long lastRenderTickChangeTime = 0;
+    private long lastSeekTime = 0;
+    private boolean desiredPause = false;
+    private boolean lastKnownBBSPaused = false;
+    private long lastKnownBBSPauseTime = 0;
 
     public PhotonFormRenderer(PhotonForm form)
     {
@@ -86,53 +97,66 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     @Override
     public void tick(IEntity iEntity)
     {
-        /* Standard ticking handled by Photon's global system
-         * We only manage lifecycle (start/stop) in render3D */
-        if (this.currentEffect != null)
-        {
-             this.currentEffect.setPaused(this.form.paused.get());
-        }
-        
         this.lastTickTime = System.currentTimeMillis();
     }
-    
+
+    public void onClientTickStart()
+    {
+        if (this.currentEffect == null || this.currentEffect.getRuntime() == null || !this.currentEffect.getRuntime().isAlive())
+        {
+            return;
+        }
+
+        boolean shouldPause = this.desiredPause;
+
+        this.currentEffect.setPaused(shouldPause);
+
+        if (shouldPause)
+        {
+            FXRuntime runtime = this.currentEffect.getRuntime();
+            for (IFXObject obj : runtime.objects.values())
+            {
+                obj.setDelay(1);
+            }
+        }
+    }
+
     private boolean isBBSPaused()
     {
         try
         {
-            /* Use reflection to check if we are in a dashboard and if the film runner is paused
-             * This avoids compilation errors with mapped/unmapped class names and private fields */
             Screen screen = Minecraft.getInstance().screen;
-            
+
             if (screen != null && screen.getClass().getSimpleName().contains("UIDashboard"))
             {
-                /* Find 'panels' field */
                 Field panelsField = null;
                 Class<?> clazz = screen.getClass();
-                
+
                 while (clazz != null && panelsField == null)
                 {
                     try { panelsField = clazz.getDeclaredField("panels"); } catch (Exception e) { clazz = clazz.getSuperclass(); }
                 }
-                
+
                 if (panelsField != null)
                 {
                     panelsField.setAccessible(true);
                     List<?> panels = (List<?>) panelsField.get(screen);
-                    
+
                     for (Object panel : panels)
                     {
                         if (panel.getClass().getSimpleName().contains("UIFilmPanel"))
                         {
-                            /* Check runner paused state via reflection */
                             Field runnerField = panel.getClass().getDeclaredField("runner");
                             runnerField.setAccessible(true);
                             Object runner = runnerField.get(panel);
-                            
+
                             if (runner != null)
                             {
                                 Method isRunning = runner.getClass().getMethod("isRunning");
-                                return !(boolean) isRunning.invoke(runner);
+                                boolean paused = !(boolean) isRunning.invoke(runner);
+                                this.lastKnownBBSPaused = paused;
+                                this.lastKnownBBSPauseTime = System.currentTimeMillis();
+                                return paused;
                             }
                         }
                     }
@@ -141,9 +165,13 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         }
         catch (Exception e)
         {
-            /* Ignore */
         }
-        
+
+        if (System.currentTimeMillis() - this.lastKnownBBSPauseTime < 1000)
+        {
+            return this.lastKnownBBSPaused;
+        }
+
         return false;
     }
 
@@ -151,6 +179,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     public void render3D(FormRenderingContext context)
     {
         this.lastRenderTime = System.currentTimeMillis();
+        this.lastRenderType = context.type;
         IEntity iEntity = context.entity;
         
         String effectId = this.form.effect.get();
@@ -190,27 +219,65 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
              this.lastAttemptTime = 0; 
         }
 
-        /* Check if effect needs restart (Loop logic)
-         * If currentEffect is dead (finished), we check if we should restart it.
-         * Paused = TRUE -> Do NOT restart (Play Once).
-         * Paused = FALSE -> Restart (Loop). */
+        long now = System.currentTimeMillis();
+        boolean entityContext = context.type == FormRenderType.ENTITY;
+        boolean filmPlaying;
+        boolean backwardSeeked = false;
+        boolean bbsPaused = entityContext && this.isBBSPaused();
+
+        if (entityContext && iEntity != null)
+        {
+            int renderTick = iEntity.getAge();
+            int previousTick = this.lastRenderTick;
+
+            if (previousTick < 0 || renderTick != previousTick)
+            {
+                this.lastRenderTickChangeTime = now;
+            }
+
+            if (previousTick >= 0 && renderTick != previousTick)
+            {
+                int delta = renderTick - previousTick;
+
+                if (delta != 1)
+                {
+                    this.lastSeekTime = now;
+                }
+
+                if (renderTick < previousTick)
+                {
+                    backwardSeeked = true;
+                    this.stopCurrentEffect();
+                }
+            }
+
+            this.lastRenderTick = renderTick;
+            boolean tickProgressing = (now - this.lastRenderTickChangeTime) < 120;
+            filmPlaying = !bbsPaused && tickProgressing;
+        }
+        else
+        {
+            this.lastRenderTick = -1;
+            this.lastRenderTickChangeTime = now;
+            filmPlaying = true;
+        }
+
+        boolean seekWindowActive = (now - this.lastSeekTime) < 250;
+        boolean shouldPause = this.form.paused.get() || !filmPlaying || bbsPaused || seekWindowActive;
+        if (backwardSeeked)
+        {
+            shouldPause = true;
+        }
+        this.desiredPause = shouldPause;
+
         boolean isAlive = this.currentEffect != null && this.currentEffect.getRuntime() != null && this.currentEffect.getRuntime().isAlive();
-        
-        /* Check for tick stagnation (Entity Pause)
-         * If tick hasn't run for > 100ms, assume entity is paused by BBS */
-        boolean tickStagnated = (System.currentTimeMillis() - this.lastTickTime > 100);
         
         /* Start effect if not running, with cooldown (2 seconds) */
         if (this.currentEffect == null || !isAlive)
         {
-             long now = System.currentTimeMillis();
-             
-             if (now - this.lastAttemptTime > 2000)
+             if (now - this.lastAttemptTime > 250)
              {
-                 /* Only start if Paused is FALSE.
-                  * This prevents auto-start on form load if Paused is enabled.
-                  * It also prevents looping if Paused is enabled. */
-                 if (!this.form.paused.get() && !tickStagnated)
+                 if (this.currentEffect == null || !shouldPause || idChanged || backwardSeeked)
                  {
                      this.lastAttemptTime = now;
                      
@@ -237,13 +304,9 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         {
             try
             {
-                boolean bbsPaused = this.isBBSPaused();
-                boolean formPaused = this.form.paused.get();
-                boolean shouldPause = bbsPaused || formPaused || tickStagnated;
-                
                 if (this.currentEffect.isPaused() != shouldPause)
                 {
-                     System.out.println("BBSPhoton: Pause state changed to " + shouldPause + " (BBS: " + bbsPaused + ", Form: " + formPaused + ", Stagnated: " + tickStagnated + ")");
+                     System.out.println("BBSPhoton: Pause state changed to " + shouldPause + " (Film playing: " + filmPlaying + ")");
                      this.currentEffect.setPaused(shouldPause);
                 }
                 
@@ -687,6 +750,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     {
         private boolean paused = false;
         private long lastTick = 0;
+        private final Map<IFXObject, Integer> frozenAges = new IdentityHashMap<>();
         
         public PausableEntityEffectExecutor(FX fx, Level level, Entity entity, AutoRotate autoRotate)
         {
@@ -695,6 +759,24 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         
         public void setPaused(boolean paused)
         {
+            if (paused && !this.paused && this.getRuntime() != null)
+            {
+                this.frozenAges.clear();
+
+                for (IFXObject obj : this.getRuntime().objects.values())
+                {
+                    if (obj instanceof Emitter emitter)
+                    {
+                        this.frozenAges.put(obj, emitter.getAge());
+                    }
+                }
+            }
+
+            if (!paused && this.paused)
+            {
+                this.frozenAges.clear();
+            }
+
             this.paused = paused;
         }
 
@@ -712,29 +794,38 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
              * This is critical to prevent "zombie" effects when dummyEntity is removed. */
             super.updateFXObjectTick(fxObject);
             
+            if (this.paused)
+            {
+                if (fxObject instanceof Emitter emitter)
+                {
+                    Integer frozenAge = this.frozenAges.get(fxObject);
+                    if (frozenAge == null)
+                    {
+                        frozenAge = emitter.getAge();
+                        this.frozenAges.put(fxObject, frozenAge);
+                    }
+
+                    emitter.setAge(frozenAge);
+                }
+
+                return;
+            }
+
             if (!this.paused)
             {
                 /* We track tick time for stagnation detection */
                 this.lastTick = System.currentTimeMillis();
+            }
+
+            if (fxObject instanceof Emitter emitter)
+            {
+                this.frozenAges.put(fxObject, emitter.getAge());
             }
         }
 
         @Override
         public void updateFXObjectFrame(IFXObject fxObject, float partialTicks)
         {
-            /* If paused, we set a high delay on all objects.
-             * We set this directly to ensure it applies before the next tick.
-             * The render3D() method will reset delay to 0 before the next render pass. */
-            if (this.paused && this.getRuntime() != null && fxObject == this.getRuntime().getRoot())
-            {
-                 FXRuntime rt = this.getRuntime();
-                 
-                 for (IFXObject obj : rt.objects.values())
-                 {
-                     obj.setDelay(100);
-                 }
-            }
-
             /* Override frame update to handle potentially dead entity gracefully
              * and ensure position updates correctly. */
             FXRuntime runtime = this.getRuntime();
