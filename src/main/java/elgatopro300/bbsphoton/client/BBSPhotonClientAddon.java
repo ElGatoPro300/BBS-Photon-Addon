@@ -1,8 +1,5 @@
 package elgatopro300.bbsphoton.client;
 
-import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
-import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
-import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.addons.BBSClientAddon;
 import mchorse.bbs_mod.events.Subscribe;
 import mchorse.bbs_mod.events.register.RegisterDashboardPanelsEvent;
@@ -14,9 +11,13 @@ import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.utils.icons.Icon;
 
+import java.util.List;
+
+import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
+import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.List;
 
 public class BBSPhotonClientAddon extends BBSClientAddon
 {

@@ -1,25 +1,27 @@
 package elgatopro300.bbsphoton.client;
 
-import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
-import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
-import elgatopro300.bbsphoton.forms.PhotonForm;
-import mchorse.bbs_mod.addons.AddonInfo;
 import mchorse.bbs_mod.BBS;
 import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.BBSModClient;
+import mchorse.bbs_mod.addons.AddonInfo;
 import mchorse.bbs_mod.forms.FormUtilsClient;
-import mchorse.bbs_mod.ui.forms.editors.UIFormEditor;
 import mchorse.bbs_mod.l10n.L10n;
-import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
 import mchorse.bbs_mod.resources.Link;
+import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
+import mchorse.bbs_mod.ui.forms.editors.UIFormEditor;
+
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.InputStream;
+
+import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
+import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
+import elgatopro300.bbsphoton.forms.PhotonForm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BBSPhotonClient
 {

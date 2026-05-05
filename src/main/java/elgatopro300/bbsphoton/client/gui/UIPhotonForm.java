@@ -1,9 +1,10 @@
 package elgatopro300.bbsphoton.client.gui;
 
-import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.ui.forms.editors.forms.UIForm;
 import mchorse.bbs_mod.ui.utils.icons.Icons;
+
+import elgatopro300.bbsphoton.forms.PhotonForm;
 
 public class UIPhotonForm extends UIForm<PhotonForm>
 {

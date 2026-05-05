@@ -1,38 +1,35 @@
 package elgatopro300.bbsphoton.client.render;
 
-import elgatopro300.bbsphoton.forms.PhotonForm;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
-import com.lowdragmc.photon.client.fx.FXHelper;
-import com.lowdragmc.photon.client.fx.FX;
-import com.lowdragmc.photon.client.fx.FXRuntime;
-import com.lowdragmc.photon.client.gameobject.IFXObject;
-import com.lowdragmc.photon.client.gameobject.emitter.Emitter;
+import mchorse.bbs_mod.forms.ITickable;
 import mchorse.bbs_mod.forms.entities.IEntity;
+import mchorse.bbs_mod.forms.renderers.FormRenderType;
 import mchorse.bbs_mod.forms.renderers.FormRenderer;
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
-import mchorse.bbs_mod.forms.renderers.FormRenderType;
-import mchorse.bbs_mod.forms.ITickable;
-import mchorse.bbs_mod.ui.framework.UIContext;
 import mchorse.bbs_mod.graphics.texture.Texture;
 import mchorse.bbs_mod.resources.Link;
+import mchorse.bbs_mod.ui.framework.UIContext;
 import mchorse.bbs_mod.utils.pose.Transform;
-import net.minecraft.client.Minecraft;
+
 import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.entity.decoration.ArmorStand;
+
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.joml.Matrix4f;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,9 +37,14 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.lang.reflect.Field;
-import java.util.List;
 
+import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
+import com.lowdragmc.photon.client.fx.FX;
+import com.lowdragmc.photon.client.fx.FXHelper;
+import com.lowdragmc.photon.client.fx.FXRuntime;
+import com.lowdragmc.photon.client.gameobject.IFXObject;
+import com.lowdragmc.photon.client.gameobject.emitter.Emitter;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 
 public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITickable
 {
@@ -332,7 +334,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                      return;
                 }
 
-                // com.lowdragmc.photon.client.fx.FXRuntime runtime = this.currentEffect.getRuntime(); // already defined
+                // FXRuntime runtime = this.currentEffect.getRuntime(); // already defined
                 IFXObject root = runtime.getRoot();
 
                 double x = iEntity.getX();

@@ -1,15 +1,15 @@
 package elgatopro300.bbsphoton;
 
-import elgatopro300.bbsphoton.client.BBSPhotonClient;
-import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBS;
 import mchorse.bbs_mod.resources.Link;
+
+import elgatopro300.bbsphoton.client.BBSPhotonClient;
+import elgatopro300.bbsphoton.forms.PhotonForm;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,6 +1,5 @@
 package elgatopro300.bbsphoton.client.gui;
 
-import elgatopro300.bbsphoton.forms.PhotonForm;
 import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.resources.Link;
@@ -10,6 +9,7 @@ import mchorse.bbs_mod.ui.framework.elements.buttons.UIButton;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIToggle;
 import mchorse.bbs_mod.ui.framework.elements.overlay.UIListOverlayPanel;
 import mchorse.bbs_mod.ui.framework.elements.overlay.UIOverlay;
+
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import elgatopro300.bbsphoton.forms.PhotonForm;
 
 public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
 {
