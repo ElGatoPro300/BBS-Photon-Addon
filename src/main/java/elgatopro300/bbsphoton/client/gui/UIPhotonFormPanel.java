@@ -93,6 +93,10 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
         panel.icons.add(openFolder);
         
         panel.addValues(this.cachedEffects);
+        if (this.form != null)
+        {
+            panel.setValue(this.form.effect.get());
+        }
         UIOverlay.addOverlay(this.getContext(), panel, 0.5F, 0.7F);
     }
     
