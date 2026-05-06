@@ -205,13 +205,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         {
              if (this.currentEffect != null)
              {
-                 final String idToLog = this.lastEffectId;
-                 
-                 Minecraft.getInstance().execute(() ->
-                 {
-                     System.out.println("BBSPhoton: Effect changed from " + idToLog + " to " + effectId);
-                     this.stopCurrentEffect();
-                 });
+                 Minecraft.getInstance().execute(this::stopCurrentEffect);
              }
              
              /* Update lastEffectId immediately to prevent loop */
@@ -308,7 +302,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             {
                 if (this.currentEffect.isPaused() != shouldPause)
                 {
-                     System.out.println("BBSPhoton: Pause state changed to " + shouldPause + " (Film playing: " + filmPlaying + ")");
                      this.currentEffect.setPaused(shouldPause);
                 }
                 
@@ -327,7 +320,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 
                 if (this.dummyEntity != null && this.dummyEntity.isRemoved())
                 {
-                     System.out.println("BBSPhoton: WARNING - Dummy entity removed! Restarting effect.");
                      this.currentEffect = null;
                      this.dummyEntity = null;
                      
@@ -526,13 +518,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     
                     if (this.dummyEntity.level() != null && entityWorld != null && this.dummyEntity.level() != entityWorld)
                     {
-                         final String idToLog = this.lastEffectId;
-                         
-                         Minecraft.getInstance().execute(() ->
-                         {
-                             System.out.println("BBSPhoton: World changed for " + idToLog + ", scheduling restart");
-                             this.stopCurrentEffect();
-                         });
+                         Minecraft.getInstance().execute(this::stopCurrentEffect);
                     }
                 }
 
@@ -550,7 +536,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             catch (Exception e)
             {
                 /* Prevent render crash */
-                System.out.println("BBSPhoton: Render Exception: " + e.getMessage());
             }
         }
     }
@@ -563,7 +548,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         /* Debug logging */
         if (!this.loggedDebug)
         {
-            System.out.println("BBSPhoton: FINAL ATTEMPT. Path: " + ICON + ", Size: " + texture.width + "x" + texture.height);
             this.loggedDebug = true;
         }
 
@@ -590,13 +574,11 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     {
         if (this.currentEffect != null)
         {
-            final String idToLog = this.lastEffectId;
             final EntityEffectExecutor effectToRemove = this.currentEffect;
             final Entity entityToRemove = this.dummyEntity;
             
             Minecraft.getInstance().execute(() ->
             {
-                System.out.println("BBSPhoton: Stopping effect " + idToLog);
                 try
                 {
                     /* Force destroy the runtime */
@@ -624,8 +606,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 }
                 catch (Exception e)
                 {
-                    System.out.println("BBSPhoton: Error stopping effect: " + e.getMessage());
-                    e.printStackTrace();
                 }
             });
 
@@ -634,7 +614,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             /* Remove dummy entity from world if it exists */
             if (this.dummyEntity != null)
             {
-                System.out.println("BBSPhoton: Removing dummy entity " + this.dummyEntity.getId());
                 this.dummyEntity.remove(Entity.RemovalReason.DISCARDED);
                 
                 /* Double check: remove from client world list if possible */
@@ -679,8 +658,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             {
                 return;
             }
-
-            System.out.println("BBSPhoton: Starting effect " + effectId);
 
             /* Create a dummy entity for the effect to attach to
              * This prevents it from following the player */
@@ -738,12 +715,12 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 {
                     activeRenderers.add(this);
                 }
+                
+                System.out.println("BBSPhoton: Photon particle (" + effectId + ") has been placed successfully.");
             }
         }
         catch (Exception e)
         {
-            System.out.println("BBSPhoton: Error starting effect " + effectId);
-            e.printStackTrace();
         }
     }
     
