@@ -2,5 +2,6 @@
   "bbs_photon.ui.panel_title": "Photon",
   "bbs_photon.ui.pick_effect": "Seleccionar Photon FX",
   "bbs_photon.ui.paused": "Pausado",
-  "bbs_photon.ui.select_effect": "Seleccionar Photon FX"
+  "bbs_photon.ui.select_effect": "Seleccionar Photon FX",
+  "bbs_photon.ui.open_folder": "Abrir Carpeta de FX"
 }

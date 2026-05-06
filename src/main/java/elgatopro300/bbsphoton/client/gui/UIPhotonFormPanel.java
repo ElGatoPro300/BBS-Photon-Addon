@@ -6,12 +6,15 @@ import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.forms.editors.forms.UIForm;
 import mchorse.bbs_mod.ui.forms.editors.panels.UIFormPanel;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIButton;
+import mchorse.bbs_mod.ui.framework.elements.buttons.UIIcon;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIToggle;
 import mchorse.bbs_mod.ui.framework.elements.overlay.UIListOverlayPanel;
 import mchorse.bbs_mod.ui.framework.elements.overlay.UIOverlay;
+import mchorse.bbs_mod.ui.utils.icons.Icons;
 
 import net.fabricmc.loader.api.FabricLoader;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +63,34 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
                 this.form.effect.set(str);
             }
         });
+        
+        UIIcon openFolder = new UIIcon(Icons.FOLDER, (b) ->
+        {
+            try
+            {
+                File gameDir = FabricLoader.getInstance().getGameDir().toFile();
+                File folder = new File(gameDir, "ldlib2/assets/photon/fx");
+                if (!folder.exists())
+                {
+                    folder.mkdirs();
+                }
+                
+                if (System.getProperty("os.name").toLowerCase().contains("win"))
+                {
+                    Runtime.getRuntime().exec("explorer.exe \"" + folder.getAbsolutePath() + "\"");
+                }
+                else
+                {
+                    Desktop.getDesktop().open(folder);
+                }
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        });
+        openFolder.tooltip(L10n.lang("bbs_photon.ui.open_folder"));
+        panel.icons.add(openFolder);
         
         panel.addValues(this.cachedEffects);
         UIOverlay.addOverlay(this.getContext(), panel, 0.5F, 0.7F);
