@@ -8,14 +8,22 @@ import mchorse.bbs_mod.forms.FormUtilsClient;
 import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
+import mchorse.bbs_mod.ui.film.replays.UIReplaysEditor;
 import mchorse.bbs_mod.ui.forms.editors.UIFormEditor;
+import mchorse.bbs_mod.ui.framework.elements.input.keyframes.UIKeyframeSheet;
+import mchorse.bbs_mod.ui.framework.elements.input.keyframes.factories.UIKeyframeFactory;
+import mchorse.bbs_mod.ui.utils.icons.Icon;
+import mchorse.bbs_mod.ui.utils.icons.Icons;
+import mchorse.bbs_mod.utils.keyframes.factories.KeyframeFactories;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
 import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
@@ -39,6 +47,51 @@ public class BBSPhotonClient
         catch (Exception e)
         {
             LOGGER.error("Failed to register BBSPhotonClientAddon", e);
+        }
+
+        /* Register custom keyframe factory override for photon_fx timeline tracks */
+        try
+        {
+            LOGGER.info("Registering UIPhotonFxKeyframeFactory...");
+            UIKeyframeFactory.IUIKeyframeFactoryFactory<String> originalStringFactory = 
+                UIKeyframeFactory.FACTORIES.get(KeyframeFactories.STRING);
+                
+            UIKeyframeFactory.FACTORIES.put(
+                KeyframeFactories.STRING,
+                (keyframe, editor) -> {
+                    UIKeyframeSheet sheet = editor.getGraph().getSheet(keyframe);
+                    if (sheet != null && ("photon_fx".equals(sheet.id) || sheet.id.endsWith("/photon_fx")))
+                    {
+                        return new elgatopro300.bbsphoton.client.gui.UIPhotonFxKeyframeFactory(keyframe, editor);
+                    }
+                    return originalStringFactory == null ? null : originalStringFactory.create(keyframe, editor);
+                }
+            );
+            LOGGER.info("Successfully registered UIPhotonFxKeyframeFactory");
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to register UIPhotonFxKeyframeFactory", e);
+        }
+
+        /* Register track color and icon for photon_fx */
+        try
+        {
+            Field colorsField = UIReplaysEditor.class.getDeclaredField("COLORS");
+            colorsField.setAccessible(true);
+            Map<String, Integer> colors = (Map<String, Integer>) colorsField.get(null);
+            colors.put("photon_fx", 0xFF00B2);
+
+            Field iconsField = UIReplaysEditor.class.getDeclaredField("ICONS");
+            iconsField.setAccessible(true);
+            Map<String, Icon> icons = (Map<String, Icon>) iconsField.get(null);
+            icons.put("photon_fx", Icons.PARTICLE);
+            
+            LOGGER.info("Successfully registered photon_fx track color (0xFF00B2) and icon (PARTICLE).");
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to register photon_fx track color and icon", e);
         }
 
         /* Register global cleanup watchdog for Photon effects

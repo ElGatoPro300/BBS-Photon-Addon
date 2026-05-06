@@ -60,7 +60,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
         {
             if (this.form != null)
             {
-                this.form.effect.set(str);
+                this.form.photon_fx.set(str);
             }
         });
         
@@ -95,7 +95,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
         panel.addValues(this.cachedEffects);
         if (this.form != null)
         {
-            panel.setValue(this.form.effect.get());
+            panel.setValue(this.form.photon_fx.get());
         }
         UIOverlay.addOverlay(this.getContext(), panel, 0.5F, 0.7F);
     }
@@ -110,7 +110,7 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
         this.paused.setValue(form.paused.get());
     }
     
-    private void populateEffects(List<String> list)
+    public static void populateEffects(List<String> list)
     {
         /* 1. Scan standard BBS resources for .fx files */
         try

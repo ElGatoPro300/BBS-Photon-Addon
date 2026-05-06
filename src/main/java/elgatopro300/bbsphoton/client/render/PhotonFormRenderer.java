@@ -184,7 +184,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         this.lastRenderType = context.type;
         IEntity iEntity = context.entity;
         
-        String effectId = this.form.effect.get();
+        String effectId = this.form.photon_fx.get();
 
         /* Handle empty effect ID */
         if (effectId.isEmpty())

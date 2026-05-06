@@ -6,14 +6,14 @@ import mchorse.bbs_mod.settings.values.numeric.ValueBoolean;
 
 public class PhotonForm extends Form
 {
-    public final ValueString effect = new ValueString("effect", "");
+    public final ValueString photon_fx = new ValueString("photon_fx", "");
     public final ValueBoolean paused = new ValueBoolean("paused", false);
 
     public PhotonForm()
     {
         super();
         
-        this.add(this.effect);
+        this.add(this.photon_fx);
         this.add(this.paused);
     }
 }
