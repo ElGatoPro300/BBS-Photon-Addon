@@ -65,7 +65,8 @@ dependencies {
 	implementation "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
 	implementation "maven.modrinth:watermedia:2.1.37"
     implementation "maven.modrinth:bbs-cml-edition:1.10.3-1.21.1"
-    implementation "maven.modrinth:photon-editor:mc1.21.1-2.1.4-neoforge"
+    implementation "maven.modrinth:photon-editor:mc1.21.1-2.2.1-neoforge"
+    implementation "maven.modrinth:kilagraph:mc1.21.1-21.1.0.7-neoforge"
     
 }
 
