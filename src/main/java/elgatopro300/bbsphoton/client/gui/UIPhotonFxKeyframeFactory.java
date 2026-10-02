@@ -9,24 +9,17 @@ import mchorse.bbs_mod.ui.framework.elements.overlay.UIListOverlayPanel;
 import mchorse.bbs_mod.ui.framework.elements.overlay.UIOverlay;
 import mchorse.bbs_mod.utils.keyframes.Keyframe;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class UIPhotonFxKeyframeFactory extends UIStringKeyframeFactory
 {
-    private static List<String> cachedEffects;
-
     public UIPhotonFxKeyframeFactory(Keyframe<String> keyframe, UIKeyframes editor)
     {
         super(keyframe, editor);
 
         UIButton pickEffect = new UIButton(L10n.lang("bbs_photon.ui.pick_effect"), (b) ->
         {
-            if (cachedEffects == null)
-            {
-                cachedEffects = new ArrayList<>();
-                UIPhotonFormPanel.populateEffects(cachedEffects);
-            }
+            List<String> effects = PhotonFxDiscovery.listEffectIds();
 
             UIListOverlayPanel panel = new UIListOverlayPanel(L10n.lang("bbs_photon.ui.select_effect"), (str) ->
             {
@@ -42,7 +35,7 @@ public class UIPhotonFxKeyframeFactory extends UIStringKeyframeFactory
                 }
             });
 
-            panel.addValues(cachedEffects);
+            panel.addValues(effects);
             panel.setValue(keyframe.getValue());
             UIOverlay.addOverlay(this.getContext(), panel, 0.5F, 0.7F);
         });

@@ -4,6 +4,8 @@
   "bbs_photon.ui.paused": "Pausado",
   "bbs_photon.ui.select_effect": "Seleccionar Photon FX",
   "bbs_photon.ui.open_folder": "Abrir Carpeta de FX",
+  "bbs_photon.ui.open_fx_folder": "Abrir carpeta de FX sueltos",
+  "bbs_photon.ui.open_fxpack_folder": "Abrir carpeta de FX Packs",
   "bbs.ui.forms.editors.photon.photon_fx": "Photon FX",
   "bbs.keyframe.photon_fx": "Photon FX",
   "bbs.replays.properties.photon_fx": "Photon FX",

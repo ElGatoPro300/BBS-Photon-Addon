@@ -1,8 +1,6 @@
 package elgatopro300.bbsphoton.client.gui;
 
-import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.l10n.L10n;
-import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.forms.editors.forms.UIForm;
 import mchorse.bbs_mod.ui.forms.editors.panels.UIFormPanel;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIButton;
@@ -12,13 +10,6 @@ import mchorse.bbs_mod.ui.framework.elements.overlay.UIListOverlayPanel;
 import mchorse.bbs_mod.ui.framework.elements.overlay.UIOverlay;
 import mchorse.bbs_mod.ui.utils.icons.Icons;
 
-import net.fabricmc.loader.api.FabricLoader;
-
-import java.awt.Desktop;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import elgatopro300.bbsphoton.forms.PhotonForm;
@@ -27,8 +18,6 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
 {
     public UIButton pickEffect;
     public UIToggle paused;
-
-    private List<String> cachedEffects;
 
     public UIPhotonFormPanel(UIForm editor)
     {
@@ -50,12 +39,8 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
     
     private void openPicker()
     {
-        if (this.cachedEffects == null)
-        {
-            this.cachedEffects = new ArrayList<>();
-            this.populateEffects(this.cachedEffects);
-        }
-        
+        List<String> effects = PhotonFxDiscovery.listEffectIds();
+
         UIListOverlayPanel panel = new UIListOverlayPanel(L10n.lang("bbs_photon.ui.select_effect"), (str) ->
         {
             if (this.form != null)
@@ -64,35 +49,21 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
             }
         });
         
-        UIIcon openFolder = new UIIcon(Icons.FOLDER, (b) ->
+        UIIcon openFxFolder = new UIIcon(Icons.FOLDER, (b) ->
         {
-            try
-            {
-                File gameDir = FabricLoader.getInstance().getGameDir().toFile();
-                File folder = new File(gameDir, "ldlib2/assets/photon/fx");
-                if (!folder.exists())
-                {
-                    folder.mkdirs();
-                }
-                
-                if (System.getProperty("os.name").toLowerCase().contains("win"))
-                {
-                    Runtime.getRuntime().exec("explorer.exe \"" + folder.getAbsolutePath() + "\"");
-                }
-                else
-                {
-                    Desktop.getDesktop().open(folder);
-                }
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
+            PhotonFxDiscovery.openFolder(PhotonFxDiscovery.getLooseFxDir());
         });
-        openFolder.tooltip(L10n.lang("bbs_photon.ui.open_folder"));
-        panel.icons.add(openFolder);
-        
-        panel.addValues(this.cachedEffects);
+        openFxFolder.tooltip(L10n.lang("bbs_photon.ui.open_fx_folder"));
+        panel.icons.add(openFxFolder);
+
+        UIIcon openFxPacksFolder = new UIIcon(Icons.FOLDER, (b) ->
+        {
+            PhotonFxDiscovery.openFolder(PhotonFxDiscovery.getFxPacksDir());
+        });
+        openFxPacksFolder.tooltip(L10n.lang("bbs_photon.ui.open_fxpack_folder"));
+        panel.icons.add(openFxPacksFolder);
+
+        panel.addValues(effects);
         if (this.form != null)
         {
             panel.setValue(this.form.photon_fx.get());
@@ -112,85 +83,6 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
     
     public static void populateEffects(List<String> list)
     {
-        /* 1. Scan standard BBS resources for .fx files */
-        try
-        {
-            Collection<String> sources = BBSMod.getProvider().getSourceKeys();
-            
-            for (String source : sources)
-            {
-                try
-                {
-                    /* Look for assets/<source>/photon */
-                    Collection<Link> links = BBSMod.getProvider().getLinksFromPath(new Link(source, "photon"), true);
-                    
-                    for (Link link : links)
-                    {
-                        if (link.path.endsWith(".fx"))
-                        {
-                            /* Construct ID: source:path_relative_to_photon
-                             * path is like "photon/subdir/effect.fx" */
-                            String path = link.path;
-                            
-                            if (path.startsWith("photon/"))
-                            {
-                                path = path.substring(7); /* remove "photon/" */
-                            }
-                            
-                            if (path.endsWith(".fx"))
-                            {
-                                path = path.substring(0, path.length() - 3); /* remove ".fx" */
-                            }
-                            
-                            /* Clean up "fx/" prefix if present, as it seems common */
-                            if (path.startsWith("fx/"))
-                            {
-                                path = path.substring(3);
-                            }
-                            
-                            list.add(source + ":" + path);
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    /* Ignore errors for specific sources */
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-
-        /* 2. Scan ldlib/assets/photon/fx directory manually */
-        try
-        {
-            File gameDir = FabricLoader.getInstance().getGameDir().toFile();
-            File photonFxDir = new File(gameDir, "ldlib2/assets/photon/fx");
-            
-            if (photonFxDir.exists() && photonFxDir.isDirectory())
-            {
-                File[] files = photonFxDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".fx"));
-                
-                if (files != null)
-                {
-                    for (File file : files)
-                    {
-                        String name = file.getName();
-                        String id = name.substring(0, name.length() - 3); /* remove .fx */
-                        
-                        /* Assuming these belong to the "photon" namespace */
-                        list.add("photon:" + id);
-                    }
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        
-        Collections.sort(list);
+        list.addAll(PhotonFxDiscovery.listEffectIds());
     }
 }

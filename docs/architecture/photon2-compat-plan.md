@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|--------|
-| **Current phase** | **B complete** — Photon `2.2.7` + LDLib2 / KilaGraph pins compile green |
-| **Next phase** | **C** — bridge extraction + FX lifecycle / stacking investigation |
+| **Current phase** | **C2 complete** — picker UX uses hybrid `FXHelper.listAllFX()` + folder actions |
+| **Next phase** | **D** — in-game verification (legacy `.fx`, `.fxpack`, model-block stacking, pause/scrub, Iris) |
 | Target artifact | Photon2 / photon-editor **`mc1.21.1-2.2.7-neoforge`** |
 | Line | `2.2.x` (not a new major) |
 | Host | BBS CML Edition (current NeoForge 1.21.1 pin in this repo) |
@@ -102,20 +102,24 @@ Announce **current / next phase** at the start and end of each phase. Suggested 
 - [x] Update this file’s dependency matrix with the exact pins that compiled.
   - `./gradlew build` succeeded on Phase B pins.
 
-### Phase C — Extract while adapting + FX lifecycle (recommended with / after B)
+### Phase C — Extract while adapting + FX lifecycle — **DONE**
 
-- [ ] Introduce `IPhotonFxBridge` / `PhotonFxBridge` (start/stop/load for `.fx` and mounted `.fxpack` ids).
-- [ ] Move pause/scrub freeze out of the god-file where touched by API changes.
-- [ ] **Explore** `FXRuntime.setRate(0)` vs current frozen-age pause; implement only after a solid conclusion (document choice here).
-- [ ] Keep `PhotonFormRenderer` as coordinator; do not increase its LOC net-positive without extraction.
-- [ ] **FX stacking / leak (post-`2.2.7`)**: re-test especially on **model blocks**; if still present, fix lifecycle inside the bridge/cleanup path (hypotheses below). Do **not** pre-fix on `2.2.1` as a separate B0 — prefer investigating after API adaptation so behavior matches the target stack.
+- [x] Introduce `IPhotonFxBridge` / `PhotonFxBridge` under new subpackage `elgatopro300.bbsphoton.client.render.photon` (start/stop + `FXHelper.listAllFX()` surface for C2).
+- [x] Opaque `IPhotonFxHandle` — renderer no longer imports `com.lowdragmc.photon.*`.
+- [x] Extract `PausableEntityEffectExecutor` out of the renderer god-file to its own adapter class (same age-freeze behavior; no breakage).
+- [x] Extract `BbsFilmPauseProbe` — isolates the UIDashboard / UIFilmPanel / runner reflection; renderer keeps the 1s cache.
+- [x] Keep `PhotonFormRenderer` as coordinator — **LOC: 834 → 518 (−316)** while adding bridge wiring; well inside the ~800 soft limit.
+- [x] **FX stacking / leak fixes applied inside the bridge** — see [C.4 leak fixes](#c4-leak-fixes-applied) below.
+- [x] `FXRuntime.setRate(0)` evaluation documented in [C.5 pause conclusion](#c5-pause-conclusion) — **no code change this phase** per plan.
 
 ### Phase C2 — `.fxpack` UX (may overlap C)
 
-- [ ] Extend effect discovery (`populateEffects` / shared helper): use the hybrid decision below — `FXHelper.listAllFX()` for loadable ids plus folder UX for loose FX / pack installation paths.
-- [ ] Ensure form editor picker + `UIPhotonFxKeyframeFactory` can select pack-backed ids.
-- [ ] Open-folder / docs hints for `photon/fxpacks` (and keep `ldlib2/assets/photon/fx` for loose `.fx`).
-- [ ] L10n keys if new UI copy is needed (`IKey` / `bbs_photon` strings).
+- [x] Extend effect discovery via shared `PhotonFxDiscovery`: primary source is `PhotonFxBridge.get().listEffectIds()` (`FXHelper.listAllFX()`), with compatibility fallback for BBS resources and loose files under `ldlib2/assets/photon/fx`.
+- [x] Ensure form editor picker + `UIPhotonFxKeyframeFactory` can select pack-backed ids. Both refresh on open (no extra UI cache; Photon already caches internally).
+- [x] Open-folder UX:
+  - loose `.fx`: `ldlib2/assets/photon/fx`
+  - packs: `FXPacks.getFxPacksDir()` exposed through `PhotonFxBridge` (normally `photon/fxpacks`)
+- [x] L10n keys added for all bundled string packs.
 
 ### Phase D — In-game verification
 
@@ -241,13 +245,35 @@ This lets users load effects/packs that are not strictly authored inside the old
 
 ---
 
-## Pause exploration note (Phase C)
+## C.4 leak fixes (applied)
 
-Photon `2.2.7` adds `FXRuntime.setRate(float)` (0 = frozen clock + objects). Candidate replacement or complement for the addon’s emitter age-freeze in `PausableEntityEffectExecutor`.
+Implemented inside `PhotonFxBridge` and the C-shaped `PhotonFormRenderer`. Mapped to the hypotheses:
 
-- **Explore** during C (compare scrub/film pause, model blocks, Iris).
-- **Do not implement** until the conclusion is written here and signed off.
-- Fallback remains current age-freeze + `setDelay` behavior.
+1. **Abandon without destroy (fixed)** — `render3D` previously nulled `currentEffect` and `dummyEntity` when the dummy was removed, without destroying the runtime; the orphan kept ticking from `EntityEffectExecutor.CACHE`. Replaced with a call to `stopCurrentEffect()` → `bridge.stop(handle)` which runs `runtime.destroy(true)` **and** removes the executor from `EntityEffectExecutor.CACHE` by host entity.
+2. **Async stop race (fixed)** — `bridge.stop` detects `Minecraft.getInstance().isSameThread()` and runs the destroy + retire **synchronously** on the client thread. The old code scheduled destroy via `Minecraft.execute(...)` and immediately nulled the local reference, so a subsequent `startEffect` could stack a second executor onto a brand-new ArmorStand host. Off-thread callers still route through `Minecraft.execute` for safety.
+3. **Per-entity CACHE buckets (fixed in practice)** — because stop is now synchronous and always retires the old host from the CACHE, recreating the dummy ArmorStand no longer leaves prior buckets ticking.
+4. **Watchdog limits (unchanged, still useful)** — the 100 ms `checkCleanup` watchdog still protects the "no more render3D" case. No new mutable global added; `activeRenderers` stays as pre-existing debt.
+
+Also: `IPhotonFxHandle.isAlive()` now combines Photon `2.2.7` `isAlive() && isValid()`, so runtimes that the particle engine silently discards (level change, `/photon_client clear_particles`) are reported dead and the renderer restarts cleanly instead of leaking a stale handle.
+
+---
+
+## C.5 pause conclusion
+
+`FXRuntime.setRate(float)` behavior reviewed from the Photon `1.21` `FXRuntime` source:
+
+- `setRate(0)` sets `root.setSelfTimeScale(0)` **and** ticks `timelinePlayer` with rate 0 — it freezes the simulation **and** the timeline together.
+- Scales **every** descendant via `IFXObject#timeScale()` inheritance — not just `Emitter`s. Our current `PausableEntityEffectExecutor` only freezes `Emitter.getAge()` and lets non-emitter objects (trails, beams, model particles, lights) keep advancing.
+- Caveat (`FXRuntime` javadoc): an FX whose own timeline speed track targets root will overwrite the external rate for the ticks that track covers. For most authored FX without a speed track targeting root, `setRate(0)` is a complete freeze.
+
+**Conclusion:** `setRate(0)` is the stronger pause and will be the default once validated in-game. Recommended future shape:
+
+```text
+setPaused(true):  runtime.setRate(0F); frozenAges snapshot kept as fallback
+setPaused(false): runtime.setRate(1F); clear frozenAges
+```
+
+**Not implemented this phase** per plan directive (and because switching pause behavior is best verified against the model-block repro during Phase D). Follow-up ticket: swap `PausableEntityEffectExecutor` pause branch to `setRate(0)` once Phase D confirms no regression on scrub/pause/Iris, and drop the companion `setDelayAll(0/1)` dance from the renderer.
 
 ---
 
