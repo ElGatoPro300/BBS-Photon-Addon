@@ -46,6 +46,7 @@ Practical rules for this addon:
 - `activeRenderers` iteration on client tick must stay exception-safe.
 - One-shot FX: do not auto-restart after Photon `isFinished()` (`effectCompleted`); see [photon2-compat-plan.md](photon2-compat-plan.md) § Lifecycle note.
 - Looping FX with `startLifetime` ≫ `duration` can accumulate particles by `.fx` design on Photon 2.2.x — not an addon restart loop.
+- F7 exterior (`UIModelBlockPanel.toggleRendering`): the immersive editor keeps running a full-screen PREVIEW stencil/picking pass even when the in-UI form draw is suppressed. Ignore PREVIEW/`modelRenderer` `render3D` while `toggleRendering` is true so Photon FX is driven only by `MODEL_BLOCK`. Restart FX when the F7 flag itself toggles (not on every `FormRenderType` change) to clear World-space trails and replay one-shots without per-frame restart thrash.
 
 ## Extraction targets (recommended order)
 

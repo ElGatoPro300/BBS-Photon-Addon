@@ -8,6 +8,7 @@ import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
 import mchorse.bbs_mod.graphics.texture.Texture;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.framework.UIContext;
+import mchorse.bbs_mod.ui.model_blocks.UIModelBlockPanel;
 import mchorse.bbs_mod.utils.pose.Transform;
 
 import net.minecraft.client.Camera;
@@ -70,6 +71,10 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     private long lastRenderTime = 0L;
     private long lastTickTime = 0L;
     private FormRenderType lastRenderType = null;
+    /* Last seen F7 exterior flag; used to restart FX once on toggle without thrashing on
+     * per-frame PREVIEW stencil passes that still run while exterior mode is active. */
+    private boolean lastExteriorRendering = false;
+    private boolean hasExteriorRenderingSample = false;
     private int lastRenderTick = -1;
     private long lastRenderTickChangeTime = 0L;
     private long lastSeekTime = 0L;
@@ -150,8 +155,39 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     public void render3D(FormRenderingContext context)
     {
         this.lastRenderTime = System.currentTimeMillis();
-        this.lastRenderType = context.type;
         IEntity iEntity = context.entity;
+
+        /* F7 exterior (UIModelBlockPanel.toggleRendering): BBS suppresses the in-UI form draw
+         * but UIPickableFormRenderer still runs a PREVIEW pass for stencil picking on the
+         * full-screen immersive viewport. That PREVIEW must not drive Photon FX, or it
+         * alternates with MODEL_BLOCK every frame (restarts / World-trail stretch). */
+        boolean exterior = UIModelBlockPanel.toggleRendering;
+        boolean previewPath = context.modelRenderer || context.type == FormRenderType.PREVIEW;
+
+        if (exterior && previewPath)
+        {
+            return;
+        }
+
+        /* Restart once when the user toggles F7, so one-shots replay and World-space trail
+         * samples from the previous space are dropped — without reacting to FormRenderType
+         * flicker from the stencil PREVIEW pass. */
+        boolean exteriorChanged = this.hasExteriorRenderingSample && this.lastExteriorRendering != exterior;
+
+        if (exteriorChanged)
+        {
+            if (this.currentHandle != null)
+            {
+                this.stopCurrentEffect();
+            }
+
+            this.effectCompleted = false;
+            this.lastAttemptTime = 0L;
+        }
+
+        this.lastExteriorRendering = exterior;
+        this.hasExteriorRenderingSample = true;
+        this.lastRenderType = context.type;
 
         String effectId = this.form.photon_fx.get();
 
@@ -257,7 +293,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         {
             if (now - this.lastAttemptTime > 250L)
             {
-                if (this.currentHandle == null || !shouldPause || idChanged || backwardSeeked)
+                if (this.currentHandle == null || !shouldPause || idChanged || backwardSeeked || exteriorChanged)
                 {
                     this.lastAttemptTime = now;
 
@@ -341,6 +377,8 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             /* Not an MCEntity or method not found */
         }
 
+        /* context.stack is typed as intermediary class_4587 in the BBS jar; read via reflection
+         * and cast to Mojang-mapped PoseStack for NeoForge + Connector. */
         PoseStack stack = null;
 
         try
@@ -363,43 +401,21 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         {
             try
             {
-                Object last = stack.getClass().getMethod("last").invoke(stack);
-                Matrix4f pose = (Matrix4f) last.getClass().getMethod("pose").invoke(last);
+                Matrix4f pose = new Matrix4f(stack.last().pose());
                 Matrix4f matrix;
 
-                try
+                /* PREVIEW PoseStack is UI-camera relative; compose with the game camera so
+                 * Photon World-space FX stays near the immersive orbit view. MODEL_BLOCK /
+                 * world stacks are already camera-relative modelview. */
+                if (context.type == FormRenderType.PREVIEW || context.modelRenderer)
                 {
-                    boolean isPreview = false;
-
-                    try
-                    {
-                        Field typeField = context.getClass().getField("type");
-                        Object typeObj = typeField.get(context);
-
-                        if (typeObj != null && typeObj.toString().contains("PREVIEW"))
-                        {
-                            isPreview = true;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        /* Ignore */
-                    }
-
-                    if (isPreview)
-                    {
-                        Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
-                        matrix = new Matrix4f().rotation(cam.rotation());
-                        matrix.mul(pose);
-                    }
-                    else
-                    {
-                        matrix = new Matrix4f(pose);
-                    }
+                    Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+                    matrix = new Matrix4f().rotation(cam.rotation());
+                    matrix.mul(pose);
                 }
-                catch (Exception e)
+                else
                 {
-                    matrix = new Matrix4f(pose);
+                    matrix = pose;
                 }
 
                 Transform t = this.form.transform.get();
@@ -424,23 +440,20 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
                 finalRot = new Quaternionf();
                 matrix.getUnnormalizedRotation(finalRot);
-
                 matrix.getScale(finalScale);
             }
             catch (Exception e)
             {
-                /* Fallback below if reflection into PoseStack fails */
                 return;
             }
         }
         else
         {
-            /* Fallback to manual calculation if stack is missing */
             Transform t = this.form.transform.get();
             Vector3f tPos = t.translate;
             Vector3f tRot = t.rotate;
             Vector3f tScale = t.scale;
-            finalScale = tScale;
+            finalScale = new Vector3f(tScale);
 
             Quaternionf entityRot = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
             Quaternionf formRot = new Quaternionf()
