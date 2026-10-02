@@ -63,6 +63,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     private IPhotonFxHandle currentHandle;
     private Entity dummyEntity;
     private boolean loggedDebug = false;
+    private boolean effectCompleted = false;
     private long lastAttemptTime = 0L;
 
     /* Watchdog to clean up effects when rendering stops (e.g. form closed) */
@@ -161,6 +162,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             {
                 this.stopCurrentEffect();
                 this.lastEffectId = "";
+                this.effectCompleted = false;
             }
 
             return;
@@ -180,6 +182,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
             /* Update lastEffectId immediately to prevent loop */
             this.lastEffectId = effectId;
+            this.effectCompleted = false;
 
             /* Reset attempt time to allow immediate start (if not paused) */
             this.lastAttemptTime = 0L;
@@ -213,6 +216,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 if (renderTick < previousTick)
                 {
                     backwardSeeked = true;
+                    this.effectCompleted = false;
                     this.stopCurrentEffect();
                 }
             }
@@ -238,10 +242,18 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
         this.desiredPause = shouldPause;
 
+        /* One-shot FX (e.g. hanabi): when Photon marks the runtime finished, stop cleanly and
+         * do not auto-restart until the effect id changes or the film seeks backward. */
+        if (this.currentHandle != null && this.currentHandle.isFinished())
+        {
+            this.stopCurrentEffect();
+            this.effectCompleted = true;
+        }
+
         boolean isAlive = this.currentHandle != null && this.currentHandle.isAlive();
 
         /* Start effect if not running, with cooldown (250ms) */
-        if (this.currentHandle == null || !isAlive)
+        if (!this.effectCompleted && (this.currentHandle == null || !isAlive))
         {
             if (now - this.lastAttemptTime > 250L)
             {

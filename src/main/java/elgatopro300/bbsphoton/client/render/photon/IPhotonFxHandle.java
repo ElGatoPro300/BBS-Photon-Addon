@@ -20,6 +20,13 @@ public interface IPhotonFxHandle
      */
     boolean isAlive();
 
+    /**
+     * Whether Photon reports the runtime as naturally finished (one-shot FX reached the end).
+     * Distinct from {@link #isAlive()} so renderers can refuse auto-restart for play-once
+     * effects without treating engine invalidation the same way.
+     */
+    boolean isFinished();
+
     boolean isPaused();
 
     /**
