@@ -14,18 +14,11 @@ import org.joml.Vector3f;
 public interface IPhotonFxHandle
 {
     /**
-     * Whether the FX runtime is still playing ({@code FXRuntime.isAlive()} only).
-     * Do not gate restarts on Photon {@code isValid()} — heartbeat misses can report invalid
-     * while the same looping instance is still rendering, which causes stacked restarts.
+     * Whether the FX runtime is still playing and still owned by the particle engine
+     * (Photon 2.2.7 {@code isAlive() && isValid()}). Renderers use this to decide whether to
+     * restart the effect.
      */
     boolean isAlive();
-
-    /**
-     * Whether Photon reports the runtime as naturally finished (one-shot FX reached the end).
-     * Distinct from {@link #isAlive()} so renderers can refuse auto-restart without treating
-     * heartbeat / wipe invalidation the same way.
-     */
-    boolean isFinished();
 
     boolean isPaused();
 
@@ -47,19 +40,4 @@ public interface IPhotonFxHandle
      * the client tick when paused so Photon does not advance the simulation.
      */
     void setDelayAll(int delay);
-
-    /**
-     * For looping particle emitters, clear leftover particles/trails when the emitter age
-     * crosses a duration cycle. Photon 2.2.x can keep prior-cycle particles alive, which
-     * stacks visually every {@code duration} ticks (e.g. forcefield).
-     *
-     * @return {@code true} if any particle queues were pruned this call
-     */
-    boolean pruneLoopingParticles();
-
-    /**
-     * Short runtime summary for temporary lifecycle diagnostics. Kept behind the handle so the
-     * renderer does not import Photon classes.
-     */
-    String getDiagnostics();
 }

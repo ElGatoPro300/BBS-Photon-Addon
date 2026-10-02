@@ -17,7 +17,7 @@
 | Pause & scrub | `PausableEntityEffectExecutor`, frozen ages, BBS film pause detection (reflection into dashboard / `UIFilmPanel`) |
 | Dummy entity | Armor stand (or similar) as FX host when needed |
 | Transforms | Pose / camera-relative placement for the form |
-| Watchdog | Stops FX when render stalls; editor/entity paths stay aggressive (~100ms), world/model-block paths use a longer timeout to avoid false restarts |
+| Watchdog | Stops FX when render stalls (~100ms) to avoid duplicates when leaving the form editor |
 | Icon link | `ICON` → `bbs_photon:textures/photon_texture.png` |
 
 ## Known architectural debt
@@ -41,8 +41,7 @@ Practical rules for this addon:
 
 ## Cleanup & lifecycle pitfalls
 
-- Switching form editor panels can duplicate particles if cleanup is too slow — the entity/editor watchdog exists for that.
-- Model-block/world render paths can skip frames for longer than the editor path; do not apply the 100ms watchdog there or looping FX can be stopped and restarted while still in use.
+- Switching form editor panels can duplicate particles if cleanup is too slow — the watchdog exists for that.
 - Stopping must release Photon runtimes; leaks show up as FX continuing after the form is gone.
 - `activeRenderers` iteration on client tick must stay exception-safe.
 

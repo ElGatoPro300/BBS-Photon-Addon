@@ -57,19 +57,12 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
      * Matches assets/bbs_photon/textures/photon_texture.png in the classpath. */
     public static final Link ICON = new Link("bbs_photon", "textures/photon_texture.png");
 
-    private static final long ENTITY_WATCHDOG_TIMEOUT_MS = 100L;
-    private static final long WORLD_WATCHDOG_TIMEOUT_MS = 10000L;
-    private static final long WATCHDOG_DIAGNOSTIC_INTERVAL_MS = 1000L;
-    private static final long RUNTIME_DIAGNOSTIC_INTERVAL_MS = 1000L;
-
     private final IPhotonFxBridge bridge = PhotonFxBridge.get();
 
     private String lastEffectId = "";
     private IPhotonFxHandle currentHandle;
     private Entity dummyEntity;
     private boolean loggedDebug = false;
-    private boolean startPending = false;
-    private boolean effectCompleted = false;
     private long lastAttemptTime = 0L;
 
     /* Watchdog to clean up effects when rendering stops (e.g. form closed) */
@@ -79,8 +72,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     private int lastRenderTick = -1;
     private long lastRenderTickChangeTime = 0L;
     private long lastSeekTime = 0L;
-    private long lastWatchdogDiagnosticTime = 0L;
-    private long lastRuntimeDiagnosticTime = 0L;
     private boolean desiredPause = false;
     private boolean lastKnownBBSPaused = false;
     private long lastKnownBBSPauseTime = 0L;
@@ -91,33 +82,18 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     }
 
     /**
-     * Called by the global client-tick watchdog to clean up abandoned effects. Entity/editor
-     * rendering keeps the aggressive timeout, but world/model-block render paths can be sparse
-     * and must not be killed after a single missed frame. The check runs even when
+     * Called by the global client-tick watchdog to clean up abandoned effects.
+     * Timeout is 100ms (2 ticks) to clear FX quickly when switching panels; this prevents
+     * particle duplication when entering/exiting the Form Editor. The check runs even when
      * {@code currentHandle} is null to drop leaked registry entries.
      */
     public boolean checkCleanup()
     {
-        long now = System.currentTimeMillis();
-        long idleMs = now - this.lastRenderTime;
-        long timeoutMs = this.getWatchdogTimeoutMs();
-
-        if (idleMs > timeoutMs)
+        if (System.currentTimeMillis() - this.lastRenderTime > 100L)
         {
-            this.stopCurrentEffect("watchdog idleMs=" + idleMs + " timeoutMs=" + timeoutMs);
+            this.stopCurrentEffect();
 
             return true;
-        }
-
-        if (this.lastRenderType != FormRenderType.ENTITY
-            && idleMs > ENTITY_WATCHDOG_TIMEOUT_MS
-            && now - this.lastWatchdogDiagnosticTime > WATCHDOG_DIAGNOSTIC_INTERVAL_MS)
-        {
-            this.lastWatchdogDiagnosticTime = now;
-            System.out.println("BBSPhoton DBG watchdog-hold " + this.debugState(this.lastEffectId)
-                + " idleMs=" + idleMs
-                + " timeoutMs=" + timeoutMs
-                + " activeRenderers=" + activeRenderers.size());
         }
 
         return false;
@@ -131,21 +107,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
     public void onClientTickStart()
     {
-        if (this.currentHandle == null)
-        {
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-
-        if (now - this.lastRuntimeDiagnosticTime > RUNTIME_DIAGNOSTIC_INTERVAL_MS)
-        {
-            this.lastRuntimeDiagnosticTime = now;
-            System.out.println("BBSPhoton DBG runtime " + this.debugState(this.lastEffectId)
-                + " " + this.currentHandle.getDiagnostics());
-        }
-
-        if (!this.currentHandle.isAlive())
+        if (this.currentHandle == null || !this.currentHandle.isAlive())
         {
             return;
         }
@@ -161,20 +123,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
              * pass each frame. */
             this.currentHandle.setDelayAll(1);
         }
-    }
-
-    /**
-     * Runs after the client tick (and Photon's emitter update/emit) so looping particle
-     * leftovers can be trimmed before the next frame is drawn.
-     */
-    public void onClientTickEnd()
-    {
-        if (this.currentHandle == null || !this.currentHandle.isAlive())
-        {
-            return;
-        }
-
-        this.currentHandle.pruneLoopingParticles();
     }
 
     private boolean isBBSPaused()
@@ -209,11 +157,10 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         /* Handle empty effect ID */
         if (effectId.isEmpty())
         {
-            if (this.currentHandle != null || this.startPending || !this.lastEffectId.isEmpty())
+            if (this.currentHandle != null || !this.lastEffectId.isEmpty())
             {
-                this.stopCurrentEffect("empty-effect-id");
+                this.stopCurrentEffect();
                 this.lastEffectId = "";
-                this.effectCompleted = false;
             }
 
             return;
@@ -224,16 +171,15 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
         if (idChanged)
         {
-            if (this.currentHandle != null || this.startPending)
+            if (this.currentHandle != null)
             {
                 /* Stop is now synchronous on the client thread (PhotonFxBridge), so a
                  * subsequent start cannot race the destroy and stack a second executor. */
-                this.stopCurrentEffect("effect-id-changed");
+                this.stopCurrentEffect();
             }
 
             /* Update lastEffectId immediately to prevent loop */
             this.lastEffectId = effectId;
-            this.effectCompleted = false;
 
             /* Reset attempt time to allow immediate start (if not paused) */
             this.lastAttemptTime = 0L;
@@ -267,8 +213,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 if (renderTick < previousTick)
                 {
                     backwardSeeked = true;
-                    this.effectCompleted = false;
-                    this.stopCurrentEffect("backward-seek previousTick=" + previousTick + " renderTick=" + renderTick);
+                    this.stopCurrentEffect();
                 }
             }
 
@@ -293,17 +238,10 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
         this.desiredPause = shouldPause;
 
-        if (this.currentHandle != null && this.currentHandle.isFinished())
-        {
-            this.stopCurrentEffect("finished-no-restart");
-            this.effectCompleted = true;
-        }
-
         boolean isAlive = this.currentHandle != null && this.currentHandle.isAlive();
 
-        /* Start effect if not running, with cooldown (250ms). One-shot FX that finished
-         * naturally stay stopped until the effect id changes or the film seeks backward. */
-        if (!this.startPending && !this.effectCompleted && (this.currentHandle == null || !isAlive))
+        /* Start effect if not running, with cooldown (250ms) */
+        if (this.currentHandle == null || !isAlive)
         {
             if (now - this.lastAttemptTime > 250L)
             {
@@ -314,19 +252,17 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                     /* If switching effects or restarting, stop previous just in case */
                     if (this.currentHandle != null)
                     {
-                        this.stopCurrentEffect("restart-before-start");
+                        this.stopCurrentEffect();
                     }
 
-                    this.startPending = true;
-                    System.out.println("BBSPhoton DBG start-request " + this.debugState(effectId)
-                        + " type=" + context.type
-                        + " alive=" + isAlive
-                        + " idChanged=" + idChanged
-                        + " backwardSeeked=" + backwardSeeked
-                        + " shouldPause=" + shouldPause
-                        + " effectCompleted=" + this.effectCompleted
-                        + " activeRenderers=" + activeRenderers.size());
-                    this.runStartEffect(iEntity, effectId);
+                    /* Schedule start on main thread to avoid concurrency issues */
+                    final IEntity entityRef = iEntity;
+                    final String effectIdRef = effectId;
+
+                    Minecraft.getInstance().execute(() ->
+                    {
+                        this.startEffect(entityRef, effectIdRef);
+                    });
                 }
             }
         }
@@ -336,10 +272,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         {
             try
             {
-                /* Trim looping leftovers before this frame draws. Photon may have emitted the
-                 * next-cycle particle during the tick; pruning here avoids a 1-frame double. */
-                this.currentHandle.pruneLoopingParticles();
-
                 if (this.currentHandle.isPaused() != shouldPause)
                 {
                     this.currentHandle.setPaused(shouldPause);
@@ -354,7 +286,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 {
                     /* Fix for FX leak hypothesis #1: previously this path nulled the handle
                      * without destroying the runtime, leaving a CACHE entry behind. */
-                    this.stopCurrentEffect("dummy-removed");
+                    this.stopCurrentEffect();
 
                     return;
                 }
@@ -541,7 +473,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
             if (this.dummyEntity.level() != null && entityWorld != null && this.dummyEntity.level() != entityWorld)
             {
-                Minecraft.getInstance().execute(() -> this.stopCurrentEffect("world-changed"));
+                Minecraft.getInstance().execute(this::stopCurrentEffect);
             }
         }
 
@@ -584,24 +516,8 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         context.batcher.fullTexturedBox(texture, x, y, w, h);
     }
 
-    private long getWatchdogTimeoutMs()
+    private void stopCurrentEffect()
     {
-        return this.lastRenderType == FormRenderType.ENTITY
-            ? ENTITY_WATCHDOG_TIMEOUT_MS
-            : WORLD_WATCHDOG_TIMEOUT_MS;
-    }
-
-    private void stopCurrentEffect(String reason)
-    {
-        if (this.currentHandle != null || this.dummyEntity != null || this.startPending)
-        {
-            System.out.println("BBSPhoton DBG stop " + this.debugState(this.lastEffectId)
-                + " reason=" + reason
-                + " activeRenderers=" + activeRenderers.size());
-        }
-
-        this.startPending = false;
-
         if (this.currentHandle != null)
         {
             /* Bridge.stop is synchronous on the client thread: destroy(force=true) + retire
@@ -628,51 +544,10 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         activeRenderers.remove(this);
     }
 
-    private String debugState(String effectId)
-    {
-        String rendererId = Integer.toHexString(System.identityHashCode(this));
-        String formId = Integer.toHexString(System.identityHashCode(this.form));
-        String handle = this.currentHandle == null ? "null" : Integer.toHexString(System.identityHashCode(this.currentHandle));
-        String dummy = this.dummyEntity == null ? "null" : String.valueOf(this.dummyEntity.getId());
-
-        return "renderer=" + rendererId
-            + " form=" + formId
-            + " effectId=" + effectId
-            + " handle=" + handle
-            + " dummy=" + dummy
-            + " startPending=" + this.startPending
-            + " lastRenderType=" + this.lastRenderType;
-    }
-
-    private void runStartEffect(IEntity iEntity, String effectId)
-    {
-        Minecraft mc = Minecraft.getInstance();
-
-        if (mc.isSameThread())
-        {
-            this.startEffect(iEntity, effectId);
-        }
-        else
-        {
-            final IEntity entityRef = iEntity;
-            final String effectIdRef = effectId;
-
-            mc.execute(() ->
-            {
-                this.startEffect(entityRef, effectIdRef);
-            });
-        }
-    }
-
     private void startEffect(IEntity iEntity, String effectId)
     {
         try
         {
-            if (!Objects.equals(effectId, this.lastEffectId))
-            {
-                return;
-            }
-
             Level world = null;
 
             try
@@ -739,17 +614,11 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 }
 
                 System.out.println("BBSPhoton: Photon particle (" + effectId + ") has been placed successfully.");
-                System.out.println("BBSPhoton DBG start-success " + this.debugState(effectId)
-                    + " activeRenderers=" + activeRenderers.size());
             }
         }
         catch (Exception e)
         {
             /* Swallow — renderer must not crash on startup failure */
-        }
-        finally
-        {
-            this.startPending = false;
         }
     }
 }

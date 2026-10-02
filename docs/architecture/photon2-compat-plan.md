@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current phase** | **C2 complete + start-race hotfix** — duplicate initial starts guarded by `startPending` |
+| **Current phase** | **C2 complete** — picker UX uses hybrid `FXHelper.listAllFX()` + folder actions |
 | **Next phase** | **D** — in-game verification (legacy `.fx`, `.fxpack`, model-block stacking, pause/scrub, Iris) |
 | Target artifact | Photon2 / photon-editor **`mc1.21.1-2.2.7-neoforge`** |
 | Line | `2.2.x` (not a new major) |
@@ -255,35 +255,6 @@ Implemented inside `PhotonFxBridge` and the C-shaped `PhotonFormRenderer`. Mappe
 4. **Watchdog limits (unchanged, still useful)** — the 100 ms `checkCleanup` watchdog still protects the "no more render3D" case. No new mutable global added; `activeRenderers` stays as pre-existing debt.
 
 Also: `IPhotonFxHandle.isAlive()` now combines Photon `2.2.7` `isAlive() && isValid()`, so runtimes that the particle engine silently discards (level change, `/photon_client clear_particles`) are reported dead and the renderer restarts cleanly instead of leaking a stale handle.
-
----
-
-## Start-race hotfix
-
-Reporter log from the `photon:forcefield` A/B test showed two starts at placement time, both with `currentHandle == null`:
-
-```text
-21:57:16.026  BBSPhoton A/B start reason=null-handle idChanged=true
-21:57:16.248  BBSPhoton: Photon particle (photon:forcefield) has been placed successfully
-21:57:16.433  BBSPhoton A/B start reason=null-handle idChanged=false
-21:57:16.433  BBSPhoton: Photon particle (photon:forcefield) has been placed successfully
-```
-
-No `A/B restart` appeared around the 5-second mark. That points away from the `isAlive()` / `isValid()` restart path and toward an initial start race:
-
-1. `render3D` sees `currentHandle == null`.
-2. It schedules `Minecraft.execute(startEffect)`.
-3. Another render happens before the scheduled start stores `currentHandle`.
-4. `render3D` still sees `currentHandle == null` and schedules a second `startEffect`.
-
-Applied fix:
-
-- `PhotonFormRenderer.startPending` blocks duplicate starts while one is queued/in progress.
-- When already on the Minecraft client thread, start runs synchronously instead of being re-queued.
-- `stopCurrentEffect()` clears `startPending`.
-- A queued start verifies that its `effectId` still matches `lastEffectId` before creating the Photon executor.
-
-Expected result: `photon:forcefield` should print one placement start and no second immediate `BBSPhoton: Photon particle (...) has been placed successfully`.
 
 ---
 

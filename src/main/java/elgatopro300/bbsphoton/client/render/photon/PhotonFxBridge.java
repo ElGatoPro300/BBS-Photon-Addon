@@ -6,7 +6,6 @@ import com.lowdragmc.photon.client.fx.FXHelper;
 import com.lowdragmc.photon.client.fx.FXRuntime;
 import com.lowdragmc.photon.client.fx.fxpack.FXPacks;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
-import com.lowdragmc.photon.client.gameobject.emitter.Emitter;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
@@ -19,9 +18,7 @@ import org.joml.Vector3f;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Photon {@code 2.2.x} adapter — the single place in this addon that talks to
@@ -35,10 +32,10 @@ import java.util.Map;
  *   {@code EntityEffectExecutor.CACHE}, synchronously when invoked on the client thread. The
  *   old code scheduled destroy via {@code Minecraft.execute(...)} and immediately nulled the
  *   local reference, letting a subsequent start race the destroy and stack a second executor.
- * - {@link PhotonFxHandle#isAlive()} uses Photon {@code isAlive()} only. Gating restarts on
- *   {@code isValid()} caused false restarts when Photon's heartbeat briefly marked a still-
- *   playing looping FX invalid (seen as {@code valid=false} + {@code cacheSize=0} while
- *   {@code alive=true}). {@code isValid()} remains in diagnostics only.
+ * - {@link PhotonFxHandle#isAlive()} combines Photon {@code 2.2.7} {@code isAlive()} with the
+ *   new {@code isValid()} probe, so runtimes silently discarded by the engine (level change,
+ *   {@code /photon_client clear_particles}) are reported dead and get a clean restart instead
+ *   of an orphaned CACHE entry.
  */
 public final class PhotonFxBridge implements IPhotonFxBridge
 {
@@ -197,17 +194,10 @@ public final class PhotonFxBridge implements IPhotonFxBridge
                 return false;
             }
 
-            /* Restart gating uses isAlive() only. isValid() is a heartbeat probe and can
-             * flicker false on MODEL_BLOCK sparse ticks without the FX actually ending. */
-            return runtime.isAlive();
-        }
-
-        @Override
-        public boolean isFinished()
-        {
-            FXRuntime runtime = this.executor.getRuntime();
-
-            return runtime != null && runtime.isFinished();
+            /* Photon 2.2.7: isValid() catches engine-side discards (level change,
+             * /photon_client clear_particles) that isAlive() alone would miss. Treating
+             * either as "not alive" makes the renderer restart cleanly instead of leaking. */
+            return runtime.isAlive() && runtime.isValid();
         }
 
         @Override
@@ -258,62 +248,6 @@ public final class PhotonFxBridge implements IPhotonFxBridge
             {
                 obj.setDelay(delay);
             }
-        }
-
-        @Override
-        public boolean pruneLoopingParticles()
-        {
-            return this.executor.trimLoopingParticles();
-        }
-
-        @Override
-        public String getDiagnostics()
-        {
-            FXRuntime runtime = this.executor.getRuntime();
-            List<EntityEffectExecutor> cached = this.hostEntity == null
-                ? null
-                : EntityEffectExecutor.CACHE.get(this.hostEntity);
-            int cacheSize = cached == null ? 0 : cached.size();
-
-            if (runtime == null)
-            {
-                return "runtime=null cacheSize=" + cacheSize;
-            }
-
-            Map<String, Integer> objectTypes = new LinkedHashMap<>();
-            int emitterCount = 0;
-            int particleAmount = 0;
-            int minEmitterAge = Integer.MAX_VALUE;
-            int maxEmitterAge = Integer.MIN_VALUE;
-
-            for (IFXObject obj : runtime.objects.values())
-            {
-                String type = obj.getClass().getSimpleName();
-                objectTypes.put(type, objectTypes.getOrDefault(type, 0) + 1);
-
-                if (obj instanceof Emitter emitter)
-                {
-                    emitterCount++;
-                    int age = emitter.getAge();
-                    minEmitterAge = Math.min(minEmitterAge, age);
-                    maxEmitterAge = Math.max(maxEmitterAge, age);
-                    particleAmount += emitter.getParticleAmount();
-                }
-            }
-
-            String emitterAges = emitterCount == 0
-                ? "none"
-                : minEmitterAge + "-" + maxEmitterAge;
-
-            return "alive=" + runtime.isAlive()
-                + " valid=" + runtime.isValid()
-                + " finished=" + runtime.isFinished()
-                + " objects=" + runtime.objects.size()
-                + " objectTypes=" + objectTypes
-                + " emitters=" + emitterCount
-                + " particles=" + particleAmount
-                + " emitterAges=" + emitterAges
-                + " cacheSize=" + cacheSize;
         }
 
         PausableEntityEffectExecutor executor()
