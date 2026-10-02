@@ -258,6 +258,22 @@ Also: `IPhotonFxHandle.isAlive()` now combines Photon `2.2.7` `isAlive() && isVa
 
 ---
 
+## Lifecycle note — one-shot vs looping FX (Photon 2.2.x)
+
+On Photon **`2.2.x`** (verified against `2.2.7`), emitter looping + emission interact more visibly than on older Photon builds used with earlier addon versions. Authors who remember effects like `photon:forcefield` *not* spawning a fresh layer every few seconds on older stacks should treat that as a **Photon/FX runtime change**, not a BBS form-Value change.
+
+**What the FX file controls**
+
+- Looping emitters with `duration` *D* and `startLifetime` ≫ *D* will emit again each cycle while older particles are still alive — e.g. forcefield: `duration=100` (~5 s), `looping=true`, burst count `1`, `startLifetime=10000`. Accumulation is **by design** of the `.fx` (also visible via Photon’s own `/photon fx … block` command, outside this addon). Tune interval/`duration` and particle lifetime in the Photon editor if a single sustained layer is desired.
+- One-shot emitters (`looping=false`) finish when the runtime reports `isFinished()` — e.g. `photon:hanabi`.
+
+**Addon policy**
+
+- **One-shot:** when `FXRuntime.isFinished()`, the renderer stops the handle and sets `effectCompleted` so it does **not** auto-restart every finish cycle. Replay only after `photon_fx` id change or film backward seek.
+- **Looping / long-lifetime FX:** the addon does **not** prune or rewrite emission; Photon plays the authored `.fx` as-is.
+
+---
+
 ## C.5 pause conclusion
 
 `FXRuntime.setRate(float)` behavior reviewed from the Photon `1.21` `FXRuntime` source:

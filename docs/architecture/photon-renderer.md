@@ -44,6 +44,8 @@ Practical rules for this addon:
 - Switching form editor panels can duplicate particles if cleanup is too slow — the watchdog exists for that.
 - Stopping must release Photon runtimes; leaks show up as FX continuing after the form is gone.
 - `activeRenderers` iteration on client tick must stay exception-safe.
+- One-shot FX: do not auto-restart after Photon `isFinished()` (`effectCompleted`); see [photon2-compat-plan.md](photon2-compat-plan.md) § Lifecycle note.
+- Looping FX with `startLifetime` ≫ `duration` can accumulate particles by `.fx` design on Photon 2.2.x — not an addon restart loop.
 
 ## Extraction targets (recommended order)
 
