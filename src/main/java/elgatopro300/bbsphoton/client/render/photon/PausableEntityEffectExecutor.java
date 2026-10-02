@@ -5,6 +5,8 @@ import com.lowdragmc.photon.client.fx.FX;
 import com.lowdragmc.photon.client.fx.FXRuntime;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
 import com.lowdragmc.photon.client.gameobject.emitter.Emitter;
+import com.lowdragmc.photon.client.gameobject.emitter.particle.ParticleEmitter;
+import com.lowdragmc.photon.client.gameobject.particle.IParticle;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -14,6 +16,7 @@ import org.joml.Vector3f;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  * Entity executor with addon-specific pause and position overrides. Extracted from
@@ -28,6 +31,10 @@ import java.util.Map;
  * {@code entity.getEyePosition(partialTicks)}, which adds the host ArmorStand's eye height
  * (~1.7 blocks) and drifts the FX upward. We render at {@code entity.position()} + the executor
  * offset so the FX stays exactly where the renderer puts the dummy entity.
+ *
+ * Looping particle trim: Photon 2.2.x can keep prior-cycle particles alive on looping emitters
+ * (e.g. {@code forcefield}). After each emitter tick/emit we trim back to the first-cycle
+ * budget so a second instance never survives into the render frame.
  */
 public class PausableEntityEffectExecutor extends EntityEffectExecutor
 {
@@ -35,6 +42,7 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
 
     private boolean paused = false;
     private long lastTick = 0L;
+    private int loopParticleBudget = 0;
 
     public PausableEntityEffectExecutor(FX fx, Level level, Entity entity, AutoRotate autoRotate)
     {
@@ -69,6 +77,32 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
         this.paused = paused;
     }
 
+    /**
+     * Safety-net trim for end-of-tick / render paths. Prefer the per-emitter trim inside
+     * {@link #updateFXObjectTick(IFXObject)}, which runs immediately after Photon's emit.
+     */
+    public boolean trimLoopingParticles()
+    {
+        FXRuntime runtime = this.getRuntime();
+
+        if (runtime == null)
+        {
+            return false;
+        }
+
+        boolean trimmed = false;
+
+        for (IFXObject obj : runtime.objects.values())
+        {
+            if (obj instanceof ParticleEmitter emitter)
+            {
+                trimmed |= this.trimLoopingEmitter(emitter);
+            }
+        }
+
+        return trimmed;
+    }
+
     @Override
     public void updateFXObjectTick(IFXObject fxObject)
     {
@@ -77,6 +111,13 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
          * destroys the effect and removes it from CACHE. This is critical to prevent
          * "zombie" effects when the dummy entity is removed. */
         super.updateFXObjectTick(fxObject);
+
+        /* Trim immediately after Photon's tick/emit for this emitter so the extra loop
+         * particle never reaches the next render frame. */
+        if (!this.paused && fxObject instanceof ParticleEmitter emitter)
+        {
+            this.trimLoopingEmitter(emitter);
+        }
 
         if (this.paused)
         {
@@ -102,6 +143,86 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
         {
             this.frozenAges.put(fxObject, emitter.getAge());
         }
+    }
+
+    private boolean trimLoopingEmitter(ParticleEmitter emitter)
+    {
+        if (!emitter.isLooping())
+        {
+            return false;
+        }
+
+        Integer durationObj = emitter.runtime().duration.get();
+
+        if (durationObj == null || durationObj <= 0)
+        {
+            return false;
+        }
+
+        int duration = durationObj;
+        int age = emitter.getAge();
+        int cycle = age / duration;
+        int amount = emitter.getParticleAmount();
+        int pending = emitter.waitToAdded.size();
+
+        /* Learn the steady particle count from the first duration cycle. */
+        if (cycle <= 0)
+        {
+            this.loopParticleBudget = Math.max(this.loopParticleBudget, amount + pending);
+
+            return false;
+        }
+
+        int budget = Math.max(1, this.loopParticleBudget);
+        int total = amount + pending;
+
+        if (total <= budget)
+        {
+            return false;
+        }
+
+        int before = total;
+
+        while (amount > 0 && amount + pending > budget)
+        {
+            boolean removed = false;
+
+            for (Queue<IParticle> queue : emitter.getParticles().values())
+            {
+                if (!queue.isEmpty())
+                {
+                    queue.poll();
+                    amount--;
+                    removed = true;
+                    break;
+                }
+            }
+
+            if (!removed)
+            {
+                break;
+            }
+        }
+
+        while (pending > 0 && amount + pending > budget)
+        {
+            if (emitter.waitToAdded.poll() == null)
+            {
+                break;
+            }
+
+            pending--;
+        }
+
+        System.out.println("BBSPhoton DBG loop-prune"
+            + " age=" + age
+            + " duration=" + duration
+            + " cycle=" + cycle
+            + " budget=" + budget
+            + " particlesBefore=" + before
+            + " particlesAfter=" + (emitter.getParticleAmount() + emitter.waitToAdded.size()));
+
+        return true;
     }
 
     @Override

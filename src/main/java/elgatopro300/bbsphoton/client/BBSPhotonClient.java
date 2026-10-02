@@ -105,6 +105,8 @@ public class BBSPhotonClient
 
                 for (PhotonFormRenderer renderer : renderers)
                 {
+                    /* Prune after Photon's tick/emit, before the next frame is drawn. */
+                    renderer.onClientTickEnd();
                     renderer.checkCleanup();
                 }
             }
