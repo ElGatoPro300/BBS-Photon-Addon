@@ -1,0 +1,82 @@
+---
+alwaysApply: true
+---
+
+# BBS Photon Addon — agent map
+
+You are an expert developer for **BBS Photon Addon**, a NeoForge addon that exposes [Photon Editor / Photon2](https://github.com/LowDragMC/Photon) particle FX as a BBS form for [BBS CML Edition](https://github.com/ElGatoPro300/BBS-CML-EDITION). This open-source repo is also a **reference implementation** for authors writing BBS addons.
+
+## How to use this document
+
+This file is a **short always-on map**, not a full manual.
+
+1. Use the paragraphs below to recognize which subsystem a request touches.
+2. **Before changing that area**, open the linked deep-dive under `docs/architecture/`.
+3. For BBS host contracts (forms, Values, events), prefer the public addon guide: [BBS CML `docs/ADDONS.md`](https://github.com/ElGatoPro300/BBS-CML-EDITION/blob/master/docs/ADDONS.md) — functional spec, not code to paste.
+4. Obey FEATURE-RULES Part 1 + Part 2 (`.cursor/rules/` or `.agents/rules/`).
+
+Operational checklists and pitfalls live in the deep-dives — keep them out of this file.
+
+## Porting / dependency bumps
+
+- Do **not** bump Photon, BBS, NeoForge, or invent a Fabric-only target unless the developer **explicitly** asks.
+- When a Photon `2.2.x` bump is requested (target pin: `mc1.21.1-2.2.7-neoforge`), adapt adapter/bridge code and update `docs/architecture/photon2-compat-plan.md`. Domain `PhotonForm` Values should stay stable.
+
+## Hard rules (always)
+
+- UI strings use BBS `L10n` / `IKey`; never hardcode user-facing text.
+- Persistent form fields use the BBS `Value` system; do not rename `photon_fx` / `paused` without a migration plan.
+- Domain (`forms/`) stays free of Minecraft and Photon imports; Photon FX calls live in adapter/bridges.
+- Respect Iris/shadow constraints when drawing FX in the world or film viewport.
+- Bugfixes stay surgical; do not further inflate `PhotonFormRenderer` — extract instead.
+- This addon targets **NeoForge 1.21.1** (+ Connector) only unless explicitly told otherwise.
+
+Details:
+
+- Code organization → `docs/architecture/code-organization.md`
+- Photon form data → `docs/architecture/photon-form.md`
+- Renderer / FX lifecycle → `docs/architecture/photon-renderer.md`
+- Registration hooks → `docs/architecture/bbs-addon-hooks.md`
+- Editor UI → `docs/architecture/ui-photon-editor.md`
+- Photon 2.2.x compatibility roadmap → `docs/architecture/photon2-compat-plan.md`
+- Folder index → `docs/architecture/README.md`
+
+---
+
+## Feature map
+
+### Photon form (domain)
+
+`PhotonForm` extends BBS `Form` with `ValueString photon_fx` and `ValueBoolean paused`. Serialization and film keyframe tracks follow BBS Values. Keep this class thin and engine-agnostic.
+
+Detail: `docs/architecture/photon-form.md`
+
+### Photon form renderer (adapter)
+
+`PhotonFormRenderer` drives Photon FX for world / film / UI previews: start/stop, pause & scrub freeze, dummy entity, cleanup watchdog. **Known debt:** oversized class with reflection into BBS film UI and Photon internals. New work should extract bridges/passes rather than grow it.
+
+Detail: `docs/architecture/photon-renderer.md`
+
+### Addon registration
+
+Server/common: `BBSPhotonAddon` registers the form type. Client: `BBSPhotonClientAddon` registers renderer, editor panel, icon, L10n; `BBSPhotonClient` wires keyframe factory overrides, track chrome, categories, and tick cleanup.
+
+Detail: `docs/architecture/bbs-addon-hooks.md`
+
+### Photon editor UI
+
+`UIPhotonForm` / `UIPhotonFormPanel` edit effect id and pause; effect picker lists LDLib Photon FX files. `UIPhotonFxKeyframeFactory` customizes film timeline editing for `photon_fx` string tracks.
+
+Detail: `docs/architecture/ui-photon-editor.md`
+
+### Photon 2.2.x compatibility
+
+Roadmap and checklist for moving from older Photon Editor pins (e.g. `2.2.1`) to **`2.2.7`** on NeoForge 1.21.1 while preserving BBS form behavior, and for adding **`.fxpack`** discovery/playback alongside legacy **`.fx`**.
+
+Detail: `docs/architecture/photon2-compat-plan.md`
+
+### Code organization
+
+Package roles, Domain/Adapter boundary, extraction targets for the renderer, and how this addon relates to BBS CML 2.2 / 3.0 practices.
+
+Detail: `docs/architecture/code-organization.md`
