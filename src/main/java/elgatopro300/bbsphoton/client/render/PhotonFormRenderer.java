@@ -63,6 +63,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     private IPhotonFxHandle currentHandle;
     private Entity dummyEntity;
     private boolean loggedDebug = false;
+    private boolean effectCompleted = false;
     private long lastAttemptTime = 0L;
 
     /* Watchdog to clean up effects when rendering stops (e.g. form closed) */
@@ -161,6 +162,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             {
                 this.stopCurrentEffect();
                 this.lastEffectId = "";
+                this.effectCompleted = false;
             }
 
             return;
@@ -180,6 +182,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
             /* Update lastEffectId immediately to prevent loop */
             this.lastEffectId = effectId;
+            this.effectCompleted = false;
 
             /* Reset attempt time to allow immediate start (if not paused) */
             this.lastAttemptTime = 0L;
@@ -208,11 +211,13 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 if (delta != 1)
                 {
                     this.lastSeekTime = now;
+                    this.effectCompleted = false;
                 }
 
                 if (renderTick < previousTick)
                 {
                     backwardSeeked = true;
+                    this.effectCompleted = false;
                     this.stopCurrentEffect();
                 }
             }
@@ -240,8 +245,24 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
         boolean isAlive = this.currentHandle != null && this.currentHandle.isAlive();
 
+        if (this.currentHandle != null && !isAlive)
+        {
+            boolean finishedNaturally = this.currentHandle.isFinished();
+
+            this.stopCurrentEffect();
+
+            if (finishedNaturally)
+            {
+                /* Photon2 one-shot semantics: non-looping FX finish and disappear. Do not
+                 * restart them every time runtime.isFinished() flips true (~effect duration),
+                 * or model blocks accumulate duplicate FX at the same position. Changing the
+                 * effect id or scrubbing/seeking resets this flag and allows a fresh play. */
+                this.effectCompleted = true;
+            }
+        }
+
         /* Start effect if not running, with cooldown (250ms) */
-        if (this.currentHandle == null || !isAlive)
+        if (!this.effectCompleted && (this.currentHandle == null || !isAlive))
         {
             if (now - this.lastAttemptTime > 250L)
             {

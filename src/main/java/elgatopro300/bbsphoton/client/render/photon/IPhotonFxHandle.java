@@ -15,10 +15,15 @@ public interface IPhotonFxHandle
 {
     /**
      * Whether the FX runtime is still playing and still owned by the particle engine
-     * (Photon 2.2.7 {@code isAlive() && isValid()}). Renderers use this to decide whether to
-     * restart the effect.
+     * (Photon 2.2.7 {@code isAlive() && isValid()}).
      */
     boolean isAlive();
+
+    /**
+     * Whether Photon considers the runtime naturally finished. Non-looping effects should be
+     * allowed to finish and disappear instead of being automatically restarted by the addon.
+     */
+    boolean isFinished();
 
     boolean isPaused();
 
