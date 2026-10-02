@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current phase** | **B in progress** — Photon `2.2.7` + LDLib2 / KilaGraph pins; compile green |
+| **Current phase** | **B complete** — Photon `2.2.7` + LDLib2 / KilaGraph pins compile green |
 | **Next phase** | **C** — bridge extraction + FX lifecycle / stacking investigation |
 | Target artifact | Photon2 / photon-editor **`mc1.21.1-2.2.7-neoforge`** |
 | Line | `2.2.x` (not a new major) |
@@ -97,8 +97,10 @@ Announce **current / next phase** at the start and end of each phase. Suggested 
 - [x] **Auto-bump** LDLib2 and **KilaGraph** to matching recent NeoForge pins:
   - LDLib2: `mc1.21.1-2.2.41-neoforge`
   - KilaGraph: `mc1.21.1-21.1.0.15-neoforge`
-- [ ] Fix compile errors **behind bridges** where possible; avoid drive-by refactors unrelated to the bump.
-- [ ] Update this file’s dependency matrix with the exact pins that compiled.
+- [x] Fix compile errors **behind bridges** where possible; avoid drive-by refactors unrelated to the bump.
+  - No Java compile fixes were required after the dependency bump.
+- [x] Update this file’s dependency matrix with the exact pins that compiled.
+  - `./gradlew build` succeeded on Phase B pins.
 
 ### Phase C — Extract while adapting + FX lifecycle (recommended with / after B)
 
