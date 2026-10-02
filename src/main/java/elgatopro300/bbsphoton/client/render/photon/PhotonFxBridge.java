@@ -201,14 +201,6 @@ public final class PhotonFxBridge implements IPhotonFxBridge
         }
 
         @Override
-        public boolean isFinished()
-        {
-            FXRuntime runtime = this.executor.getRuntime();
-
-            return runtime != null && runtime.isFinished();
-        }
-
-        @Override
         public boolean isPaused()
         {
             return this.executor.isPaused();

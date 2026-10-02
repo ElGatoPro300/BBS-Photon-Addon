@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|--------|
-| **Current phase** | **C2 complete + lifecycle hotfix** — no-looping FX finish naturally; no auto-restart every ~100 ticks |
+| **Current phase** | **C2 complete** — picker UX uses hybrid `FXHelper.listAllFX()` + folder actions |
 | **Next phase** | **D** — in-game verification (legacy `.fx`, `.fxpack`, model-block stacking, pause/scrub, Iris) |
 | Target artifact | Photon2 / photon-editor **`mc1.21.1-2.2.7-neoforge`** |
 | Line | `2.2.x` (not a new major) |
@@ -125,8 +125,6 @@ Announce **current / next phase** at the start and end of each phase. Suggested 
 
 - [ ] World playback of Photon forms on stubs / actors
 - [ ] **Model blocks** with Photon forms: no stacking / leftover particles after remove/switch
-- [ ] **No-looping FX** on model blocks: effect plays once, disappears, and does **not** duplicate every ~100 ticks / 5 seconds
-- [ ] Looping FX on model blocks: effect stays as one live instance, no periodic duplicate
 - [ ] Form editor: pick effect, preview, open/close without duplicate FX
 - [ ] Film timeline: `photon_fx` keyframes + scrub/pause
 - [ ] `paused` Value honored
@@ -257,26 +255,6 @@ Implemented inside `PhotonFxBridge` and the C-shaped `PhotonFormRenderer`. Mappe
 4. **Watchdog limits (unchanged, still useful)** — the 100 ms `checkCleanup` watchdog still protects the "no more render3D" case. No new mutable global added; `activeRenderers` stays as pre-existing debt.
 
 Also: `IPhotonFxHandle.isAlive()` now combines Photon `2.2.7` `isAlive() && isValid()`, so runtimes that the particle engine silently discards (level change, `/photon_client clear_particles`) are reported dead and the renderer restarts cleanly instead of leaking a stale handle.
-
----
-
-## Lifecycle hotfix — no-looping FX auto-restart
-
-New reporter clue after C/C2: with recent Photon2, a non-looping effect can duplicate approximately every **100 ticks / 5 seconds**. Root cause: the addon treated `!runtime.isAlive()` as "start a new FX". In Photon2, `isAlive()` becomes false when a one-shot effect naturally reaches `runtime.isFinished()`, so the addon was periodically replaying the same FX at the same position. If teardown left visible remnants for any amount of time, model blocks accumulated stacked instances.
-
-Applied hotfix:
-
-- `IPhotonFxHandle` exposes `isFinished()` separately from `isAlive()`.
-- `PhotonFormRenderer` tracks `effectCompleted`.
-- When a runtime is **finished naturally**, the renderer stops/cleans it and sets `effectCompleted = true`, preventing automatic restart.
-- `effectCompleted` resets only when the `photon_fx` id changes or a film scrub/seek occurs, matching Photon2 one-shot semantics.
-- Runtime invalidation that is **not** a natural finish can still restart cleanly.
-
-Expected behavior after hotfix:
-
-- non-looping FX: play once, disappear, no periodic duplicate;
-- looping FX: stay alive as one instance;
-- scrub / effect id changes: allow a fresh play.
 
 ---
 
