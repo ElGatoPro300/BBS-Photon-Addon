@@ -8,6 +8,7 @@ Client UI that edits `PhotonForm` Values and customizes film keyframe editing fo
 |-------|------|
 | `UIPhotonForm` | `UIForm<PhotonForm>` — registers default panel + standard form panels |
 | `UIPhotonFormPanel` | Effect picker button + paused toggle bound to Values |
+| `UIPhotonRuntimePanel` | Foldable parameter, playback/signal, anchor and post-effect controls |
 | `UIPhotonFxKeyframeFactory` | Keyframe editor widget for `photon_fx` string tracks |
 
 ## Form panel behavior
@@ -23,6 +24,10 @@ Client UI that edits `PhotonForm` Values and customizes film keyframe editing fo
 - Labels via `L10n.lang("bbs_photon.ui.*")`.
 
 `UIPhotonRuntimePanel` adds parameter, playback/signal, anchor and post-effect panels. Property pickers read `PhotonObjectCatalog` and Photon's post-effect schema; typed controls edit BBS Values. The diagnostic monitor displays the current renderer's latest signal history, unresolved bindings and catch-up counter. See [runtime features](photon-runtime-features.md) for authoring instructions and synchronization limits.
+
+The five Photon tabs use CML's native particle, gear, play, link and filter icons, respectively. Controls are grouped in native `UISection` widgets: effect/pause on the main tab; timing, seed and diagnostics on playback; an individual group for each parameter or anchor; and separate post-effect settings and parameter groups. Add-entry buttons remain outside the foldable groups. Explicit section IDs include the tab and entry Value ID so collapse preferences survive panel rebuilds and distinguish parameter lists from post-effect lists. Numbered titles reuse the existing localization keys across all bundled languages. UI controls continue to edit the same Values; section state belongs to CML's editor layout settings.
+
+Verified in the NeoForge development client: all five tabs construct and display their icons; add/remove actions update parameter, anchor and post-parameter Values; fold state survives rebuilding; a header mouse event collapses and reflows its group; scrolling reaches the last parameter action. Screenshots and development-only probes are kept in ignored `build/validation`. No FX clock, renderer, dependency or saved form format changes are involved.
 
 Effect ids remain the same `namespace:path` strings stored in `photon_fx`; `.fxpack` simply mounts more `assets/<namespace>/fx/<path>.fx` resources into Photon.
 

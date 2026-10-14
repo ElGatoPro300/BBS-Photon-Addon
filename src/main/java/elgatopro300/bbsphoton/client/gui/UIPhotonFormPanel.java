@@ -3,6 +3,7 @@ package elgatopro300.bbsphoton.client.gui;
 import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.ui.forms.editors.forms.UIForm;
 import mchorse.bbs_mod.ui.forms.editors.panels.UIFormPanel;
+import mchorse.bbs_mod.ui.framework.elements.UISection;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIButton;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIIcon;
 import mchorse.bbs_mod.ui.framework.elements.buttons.UIToggle;
@@ -33,8 +34,8 @@ public class UIPhotonFormPanel extends UIFormPanel<PhotonForm>
             }
         });
         
-        this.options.add(this.pickEffect.marginTop(6));
-        this.options.add(this.paused.marginTop(6));
+        this.options.add(new UISection(L10n.lang("bbs_photon.ui.panel_title"), this.pickEffect, this.paused)
+            .stateId("bbs_photon.effect"));
     }
     
     private void openPicker()
