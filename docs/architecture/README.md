@@ -10,6 +10,7 @@ This index follows the same layout used in [BBS CML Edition](https://github.com/
 
 | Doc | Topic |
 |-----|--------|
+| [cml3-migration.md](cml3-migration.md) | CML 3.0 API migration, local dependency setup and runtime verification |
 | [code-organization.md](code-organization.md) | Package roles, Domain/Adapter boundary, extraction targets |
 | [photon-form.md](photon-form.md) | `PhotonForm` Values, persistence, film tracks |
 | [photon-renderer.md](photon-renderer.md) | FX lifecycle, pause/scrub, cleanup, Iris notes, known debt |

@@ -47,39 +47,65 @@ neoForge {
         }
     }
 
-    mods {
-        "${project.mod_id}" {
-            sourceSet sourceSets.main
-        }
-    }
 }
 
 dependencies {
     // Connector & FFAPI (via Sinytra Maven)
     additionalRuntimeClasspath "org.sinytra:connector:${project.connector_version}"
     implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:${project.ffapi_version}"
+    compileOnly "org.sinytra:forgified-fabric-loader:2.5.68+0.18.4+1.21.1"
 
     // Dependencies
     implementation "maven.modrinth:ldlib:${project.ldlib2_version}"
 	implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
 	implementation "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
-	implementation "maven.modrinth:watermedia:2.1.37"
-    implementation "maven.modrinth:bbs-cml-edition:1.10.3-1.21.1"
+    compileOnly files(providers.gradleProperty('bbs_cml_jar').get())
     implementation "maven.modrinth:photon-editor:mc1.21.1-2.2.7-neoforge"
     implementation "maven.modrinth:kilagraph:mc1.21.1-21.1.0.15-neoforge"
     
 }
+
+// Connector discovers the intermediary host JAR from the development mods directory.
+def verifyCmlHost = tasks.register('verifyCmlHost') {
+    doLast {
+        def hostJar = file(providers.gradleProperty('bbs_cml_jar').get())
+        if (!hostJar.isFile()) {
+            throw new GradleException('Build the CML 3.0 Minecraft 1.21.1 JAR first, or set -Pbbs_cml_jar=<path>.')
+        }
+        new java.util.zip.ZipFile(hostJar).withCloseable { archive ->
+            if (archive.getEntry('mchorse/bbs_mod/api/BBSAddonMod.class') == null) {
+                throw new GradleException('bbs_cml_jar must point to a CML 3.0 distribution JAR, not a sources JAR.')
+            }
+        }
+    }
+}
+
+def stageCmlHost = tasks.register('stageCmlHost', Copy) {
+    dependsOn(verifyCmlHost)
+    from(providers.gradleProperty('bbs_cml_jar'))
+    into(layout.projectDirectory.dir('run/mods'))
+    rename { 'bbs-cml-host.jar' }
+}
+
+def stageConnectorAddon = tasks.register('stageConnectorAddon', Copy) {
+    from(tasks.named('jar'))
+    into(layout.projectDirectory.dir('run/mods'))
+    rename { 'bbs-photon-addon.jar' }
+}
+
+tasks.named('runClient').configure { dependsOn(stageCmlHost, stageConnectorAddon) }
+tasks.named('runServer').configure { dependsOn(stageCmlHost, stageConnectorAddon) }
+tasks.named('compileJava').configure { dependsOn(verifyCmlHost) }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 21
 }
 
-// Ensure fabric.mod.json and neoforge.mods.toml are included and expanded
+// Connector discovers BBS entrypoints from Fabric metadata; the runtime remains NeoForge.
 processResources {
     inputs.property "version", project.version
-    filesMatching(["fabric.mod.json", "META-INF/neoforge.mods.toml"]) {
-        expand "version": project.version,
-               "file": [jarVersion: project.version]
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
     }
 }

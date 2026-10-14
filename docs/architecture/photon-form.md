@@ -15,7 +15,7 @@ Registered in the constructor via `this.add(...)`.
 
 ## Persistence
 
-BBS serializes Values automatically (NBT/JSON). Film replays can keyframe form properties; the string track id used by the custom keyframe UI is `photon_fx` (also matched as `*/photon_fx` in the factory override).
+BBS serializes Values automatically (NBT/JSON). Film replays can keyframe form properties; CML 3.0's property-specific keyframe registration matches `photon_fx`, including bodypart paths.
 
 **Do not rename Value ids** without a migration plan and explicit maintainer approval — existing projects store these keys.
 

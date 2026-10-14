@@ -1,78 +1,85 @@
 package elgatopro300.bbsphoton.client;
 
-import mchorse.bbs_mod.addons.BBSClientAddon;
-import mchorse.bbs_mod.events.Subscribe;
-import mchorse.bbs_mod.events.register.RegisterDashboardPanelsEvent;
-import mchorse.bbs_mod.events.register.RegisterFormCategoriesEvent;
-import mchorse.bbs_mod.events.register.RegisterFormsRenderersEvent;
-import mchorse.bbs_mod.events.register.RegisterIconsEvent;
-import mchorse.bbs_mod.events.register.RegisterL10nEvent;
+import mchorse.bbs_mod.api.AddonContext;
+import mchorse.bbs_mod.api.BBSAddonMod;
+import mchorse.bbs_mod.api.Subscribe;
+import mchorse.bbs_mod.api.client.events.RegisterFormEditorsEvent;
+import mchorse.bbs_mod.api.client.events.RegisterFormRenderersEvent;
+import mchorse.bbs_mod.api.client.events.RegisterFormSectionsEvent;
+import mchorse.bbs_mod.api.client.events.RegisterKeyframeEditorsEvent;
+import mchorse.bbs_mod.api.client.events.RegisterL10nEvent;
+import mchorse.bbs_mod.api.client.events.RegisterTrackPresentationEvent;
+import mchorse.bbs_mod.api.replays.TrackPresentation;
 import mchorse.bbs_mod.l10n.L10n;
 import mchorse.bbs_mod.resources.Link;
-import mchorse.bbs_mod.ui.utils.icons.Icon;
 
 import java.util.List;
 
+import elgatopro300.bbsphoton.client.gui.PhotonFormSection;
 import elgatopro300.bbsphoton.client.gui.UIPhotonForm;
+import elgatopro300.bbsphoton.client.gui.UIPhotonFxKeyframeFactory;
 import elgatopro300.bbsphoton.client.render.PhotonFormRenderer;
 import elgatopro300.bbsphoton.forms.PhotonForm;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class BBSPhotonClientAddon extends BBSClientAddon
+public class BBSPhotonClientAddon implements BBSAddonMod
 {
-    public static final Logger LOGGER = LoggerFactory.getLogger("bbs-photon-addon-client");
+    private final BBSPhotonClient lifecycle = new BBSPhotonClient();
 
     @Override
-    @Subscribe
-    public void registerDashboardPanels(RegisterDashboardPanelsEvent event)
+    public int requiredApiVersion()
     {
-        /* Register dashboard panels */
+        return 2;
     }
 
     @Override
-    @Subscribe
-    public void registerFormsRenderers(RegisterFormsRenderersEvent event)
+    public void initialize(AddonContext context)
     {
-        LOGGER.info("Registering Photon form renderer and panel...");
-        /* Register form renderers */
-        event.registerRenderer(PhotonForm.class, PhotonFormRenderer::new);
-        event.registerPanel(PhotonForm.class, UIPhotonForm::new);
+        this.lifecycle.initialize();
     }
 
     @Override
-    @Subscribe
-    public void registerFormCategories(RegisterFormCategoriesEvent event)
+    public void shutdown(AddonContext context)
     {
-        /* NOTE: This is handled in BBSPhotonClient.onInitializeClient via ClientLifecycleEvents.CLIENT_STARTED
-         * to avoid being overwritten by BBSResources.init() */
+        this.lifecycle.stopEffects();
     }
 
-    @Override
     @Subscribe
-    public void registerIcons(RegisterIconsEvent event)
+    public void registerRenderers(RegisterFormRenderersEvent event)
     {
-        LOGGER.info("Registering Photon form icon...");
-        /* Updated to match actual icon size (96x96) */
-        event.register(new Icon(PhotonFormRenderer.ICON, "bbs:photon", 0, 0, 40, 40, 40, 40));
+        event.register(PhotonForm.class, PhotonFormRenderer::new);
     }
 
-    @Override
     @Subscribe
-    public void registerL10n(RegisterL10nEvent event)
+    public void registerEditors(RegisterFormEditorsEvent event)
     {
-        LOGGER.info("Registering BBS L10n strings for bbs_photon...");
-        event.l10n.register((lang) -> List.of(
-            new Link("bbs_photon", "strings/" + L10n.DEFAULT_LANGUAGE + ".json"),
-            new Link("bbs_photon", "strings/" + lang + ".json")
+        event.register(PhotonForm.class, UIPhotonForm::new);
+    }
+
+    @Subscribe
+    public void registerSections(RegisterFormSectionsEvent event)
+    {
+        event.register(PhotonFormSection::new);
+    }
+
+    @Subscribe
+    public void registerKeyframes(RegisterKeyframeEditorsEvent event)
+    {
+        event.<String>registerProperty("photon_fx", UIPhotonFxKeyframeFactory::new);
+    }
+
+    @Subscribe
+    public void registerTracks(RegisterTrackPresentationEvent event)
+    {
+        event.register(new TrackPresentation("photon_fx", "bbs.keyframe.photon_fx", 0xFF00B2,
+            "bbs_photon:properties", "bbs_photon.ui.panel_title", "", 0));
+    }
+
+    @Subscribe
+    public void registerLanguages(RegisterL10nEvent event)
+    {
+        event.l10n.register(language -> List.of(
+            Link.create("bbs_photon:strings/" + L10n.DEFAULT_LANGUAGE + ".json"),
+            Link.create("bbs_photon:strings/" + language + ".json")
         ));
-        try
-        {
-            event.l10n.reload();
-        }
-        catch (Exception e)
-        {
-            LOGGER.warn("Failed to reload L10n immediately; strings will load on next language switch.", e);
-        }
     }
 }

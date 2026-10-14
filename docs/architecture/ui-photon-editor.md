@@ -28,10 +28,7 @@ Do not start Photon runtimes from the panel. Preview rendering goes through `Pho
 
 ## Keyframe factory
 
-Registered in `BBSPhotonClient.init` by wrapping the global STRING factory:
-
-- If the sheet id is `photon_fx` or ends with `/photon_fx` → `UIPhotonFxKeyframeFactory`
-- Else → original string factory
+Registered through CML 3.0's `RegisterKeyframeEditorsEvent.registerProperty("photon_fx", ...)`. CML resolves bodypart property paths to their leaf name. Other string properties keep the host's standard editor.
 
 This lets the film timeline pick Photon FX the same way as the form panel.
 

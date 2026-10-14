@@ -9,31 +9,22 @@ import mchorse.bbs_mod.graphics.texture.Texture;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.framework.UIContext;
 import mchorse.bbs_mod.ui.model_blocks.UIModelBlockPanel;
-import mchorse.bbs_mod.utils.pose.Transform;
 
-import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 import elgatopro300.bbsphoton.client.render.photon.BbsFilmPauseProbe;
+import elgatopro300.bbsphoton.client.render.photon.BbsRenderBridge;
 import elgatopro300.bbsphoton.client.render.photon.IPhotonFxBridge;
 import elgatopro300.bbsphoton.client.render.photon.IPhotonFxHandle;
 import elgatopro300.bbsphoton.client.render.photon.PhotonFxBridge;
@@ -45,7 +36,7 @@ import elgatopro300.bbsphoton.forms.PhotonForm;
  * update transform → cleanup when unused.
  *
  * Photon API calls are isolated in {@code PhotonFxBridge}; emitter age-freeze lives in
- * {@code PausableEntityEffectExecutor}; BBS pause reflection lives in {@code BbsFilmPauseProbe}.
+ * {@code PausableEntityEffectExecutor}; CML integration lives in the BBS bridges.
  * See {@code docs/architecture/photon-renderer.md} and {@code photon2-compat-plan.md}.
  */
 public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITickable
@@ -120,7 +111,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
         boolean shouldPause = this.desiredPause;
 
-        this.currentHandle.setPaused(shouldPause);
+        this.currentHandle.setPaused(this.desiredPause);
 
         if (shouldPause)
         {
@@ -154,6 +145,11 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     @Override
     public void render3D(FormRenderingContext context)
     {
+        if (context.isPicking())
+        {
+            return;
+        }
+
         this.lastRenderTime = System.currentTimeMillis();
         IEntity iEntity = context.entity;
 
@@ -224,15 +220,56 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             this.lastAttemptTime = 0L;
         }
 
+        this.ensurePlayback(context, idChanged, exteriorChanged);
+
+        /* Update position / rotation every frame for smooth rendering */
+        if (this.currentHandle != null && this.currentHandle.isAlive())
+        {
+            try
+            {
+                if (this.currentHandle.isPaused() != this.desiredPause)
+                {
+                    this.currentHandle.setPaused(this.desiredPause);
+                }
+
+                /* Always reset delay to 0 in render3D so Photon's render pass can draw the
+                 * effect this frame. The pause stop-tick is applied in onClientTickStart by
+                 * raising the delay back to 1. */
+                this.currentHandle.setDelayAll(0);
+
+                if (this.dummyEntity != null && this.dummyEntity.isRemoved())
+                {
+                    /* Fix for FX leak hypothesis #1: previously this path nulled the handle
+                     * without destroying the runtime, leaving a CACHE entry behind. */
+                    this.stopCurrentEffect();
+
+                    return;
+                }
+
+                this.applyTransformAndUpdateRoot(context, iEntity);
+            }
+            catch (Exception e)
+            {
+                /* Prevent render crash */
+            }
+        }
+    }
+
+    private void ensurePlayback(FormRenderingContext context, boolean idChanged, boolean exteriorChanged)
+    {
+        IEntity iEntity = context.entity;
+        String effectId = this.form.photon_fx.get();
         long now = System.currentTimeMillis();
         boolean entityContext = context.type == FormRenderType.ENTITY;
+        boolean timelineContext = entityContext || Float.isFinite(context.previewTick);
         boolean filmPlaying;
         boolean backwardSeeked = false;
-        boolean bbsPaused = entityContext && this.isBBSPaused();
+        boolean bbsPaused = timelineContext && this.isBBSPaused();
 
-        if (entityContext && iEntity != null)
+        if (timelineContext && iEntity != null)
         {
-            int renderTick = iEntity.getAge();
+            float timelineTick = Float.isFinite(context.previewTick) ? context.previewTick : context.animationTick;
+            int renderTick = Float.isFinite(timelineTick) ? (int) Math.floor(timelineTick) : iEntity.getAge();
             int previousTick = this.lastRenderTick;
 
             if (previousTick < 0 || renderTick != previousTick)
@@ -315,199 +352,30 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             }
         }
 
-        /* Update position / rotation every frame for smooth rendering */
-        if (this.currentHandle != null && this.currentHandle.isAlive())
-        {
-            try
-            {
-                if (this.currentHandle.isPaused() != shouldPause)
-                {
-                    this.currentHandle.setPaused(shouldPause);
-                }
-
-                /* Always reset delay to 0 in render3D so Photon's render pass can draw the
-                 * effect this frame. The pause stop-tick is applied in onClientTickStart by
-                 * raising the delay back to 1. */
-                this.currentHandle.setDelayAll(0);
-
-                if (this.dummyEntity != null && this.dummyEntity.isRemoved())
-                {
-                    /* Fix for FX leak hypothesis #1: previously this path nulled the handle
-                     * without destroying the runtime, leaving a CACHE entry behind. */
-                    this.stopCurrentEffect();
-
-                    return;
-                }
-
-                this.applyTransformAndUpdateRoot(context, iEntity);
-            }
-            catch (Exception e)
-            {
-                /* Prevent render crash */
-            }
-        }
     }
 
     private void applyTransformAndUpdateRoot(FormRenderingContext context, IEntity iEntity)
     {
-        double x = iEntity.getX();
-        double y = iEntity.getY();
-        double z = iEntity.getZ();
-        float yaw = iEntity.getYaw();
+        BbsRenderBridge.FxTransform transform = BbsRenderBridge.transform(context, this.form.transform.get());
 
-        /* Use interpolation for MCEntity to prevent jitter.
-         * Reflection avoids class_xxxx errors (BBS Intermediary vs NeoForge Mojang). */
-        try
+        if (this.dummyEntity != null)
         {
-            Method getMcEntity = iEntity.getClass().getMethod("getMcEntity");
-            Entity mcEntity = (Entity) getMcEntity.invoke(iEntity);
+            Vector3f position = transform.position();
+            this.dummyEntity.xo = position.x;
+            this.dummyEntity.yo = position.y;
+            this.dummyEntity.zo = position.z;
+            this.dummyEntity.setPos(position.x, position.y, position.z);
 
-            if (mcEntity != null)
+            Level world = BbsRenderBridge.world(iEntity);
+
+            if (world != null && this.dummyEntity.level() != world)
             {
-                float pt = context.transition;
-
-                x = Mth.lerp(pt, mcEntity.xo, mcEntity.getX());
-                y = Mth.lerp(pt, mcEntity.yo, mcEntity.getY());
-                z = Mth.lerp(pt, mcEntity.zo, mcEntity.getZ());
-                yaw = Mth.lerp(pt, mcEntity.yRotO, mcEntity.getYRot());
-            }
-        }
-        catch (Exception e)
-        {
-            /* Not an MCEntity or method not found */
-        }
-
-        /* context.stack is typed as intermediary class_4587 in the BBS jar; read via reflection
-         * and cast to Mojang-mapped PoseStack for NeoForge + Connector. */
-        PoseStack stack = null;
-
-        try
-        {
-            Field stackField = context.getClass().getField("stack");
-            stack = (PoseStack) stackField.get(context);
-        }
-        catch (Exception e)
-        {
-            /* Ignore */
-        }
-
-        double finalX;
-        double finalY;
-        double finalZ;
-        Quaternionf finalRot;
-        Vector3f finalScale = new Vector3f(1.0F, 1.0F, 1.0F);
-
-        if (stack != null)
-        {
-            try
-            {
-                Matrix4f pose = new Matrix4f(stack.last().pose());
-                Matrix4f matrix;
-
-                /* PREVIEW PoseStack is UI-camera relative; compose with the game camera so
-                 * Photon World-space FX stays near the immersive orbit view. MODEL_BLOCK /
-                 * world stacks are already camera-relative modelview. */
-                if (context.type == FormRenderType.PREVIEW || context.modelRenderer)
-                {
-                    Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
-                    matrix = new Matrix4f().rotation(cam.rotation());
-                    matrix.mul(pose);
-                }
-                else
-                {
-                    matrix = pose;
-                }
-
-                Transform t = this.form.transform.get();
-                Vector3f tPos = t.translate;
-                Vector3f tRot = t.rotate;
-                Vector3f tScale = t.scale;
-
-                matrix.translate(tPos);
-                matrix.rotate(new Quaternionf()
-                    .rotateZ((float) Math.toRadians(tRot.z))
-                    .rotateY((float) Math.toRadians(tRot.y))
-                    .rotateX((float) Math.toRadians(tRot.x)));
-                matrix.scale(tScale);
-
-                Vector3f trans = new Vector3f();
-                matrix.getTranslation(trans);
-
-                Vec3 mcPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                finalX = trans.x + mcPos.x;
-                finalY = trans.y + mcPos.y;
-                finalZ = trans.z + mcPos.z;
-
-                finalRot = new Quaternionf();
-                matrix.getUnnormalizedRotation(finalRot);
-                matrix.getScale(finalScale);
-            }
-            catch (Exception e)
-            {
+                this.stopCurrentEffect();
                 return;
             }
         }
-        else
-        {
-            Transform t = this.form.transform.get();
-            Vector3f tPos = t.translate;
-            Vector3f tRot = t.rotate;
-            Vector3f tScale = t.scale;
-            finalScale = new Vector3f(tScale);
 
-            Quaternionf entityRot = new Quaternionf().rotateY((float) Math.toRadians(-yaw));
-            Quaternionf formRot = new Quaternionf()
-                .rotateZ((float) Math.toRadians(tRot.z))
-                .rotateY((float) Math.toRadians(tRot.y))
-                .rotateX((float) Math.toRadians(tRot.x));
-
-            finalRot = new Quaternionf(entityRot).mul(formRot);
-
-            Vector3f offset = new Vector3f(tPos);
-            entityRot.transform(offset);
-
-            finalX = x + offset.x;
-            finalY = y + offset.y;
-            finalZ = z + offset.z;
-        }
-
-        /* Update dummy entity position so PausableEntityEffectExecutor renders the effect at
-         * the correct world location (it reads entity.position()). */
-        if (this.dummyEntity != null)
-        {
-            this.dummyEntity.xo = finalX;
-            this.dummyEntity.yo = finalY;
-            this.dummyEntity.zo = finalZ;
-
-            this.dummyEntity.setPos(finalX, finalY, finalZ);
-            this.dummyEntity.setYRot(yaw);
-            this.dummyEntity.setYHeadRot(yaw);
-
-            /* Ensure dummy entity stays in valid world context if world changes */
-            Level entityWorld = null;
-
-            try
-            {
-                Method getWorld = iEntity.getClass().getMethod("getWorld");
-                entityWorld = (Level) getWorld.invoke(iEntity);
-            }
-            catch (Exception e)
-            {
-                /* Ignore */
-            }
-
-            if (this.dummyEntity.level() != null && entityWorld != null && this.dummyEntity.level() != entityWorld)
-            {
-                Minecraft.getInstance().execute(this::stopCurrentEffect);
-            }
-        }
-
-        /* Update FX root transform via handle (keeps renderer free of Photon API types). */
-        this.currentHandle.updateRoot(
-            new Vector3f((float) finalX, (float) finalY, (float) finalZ),
-            finalRot,
-            finalScale
-        );
+        this.currentHandle.updateRoot(transform.position(), transform.rotation(), transform.scale());
     }
 
     @Override
@@ -541,7 +409,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         context.batcher.fullTexturedBox(texture, x, y, w, h);
     }
 
-    private void stopCurrentEffect()
+    public void stopCurrentEffect()
     {
         if (this.currentHandle != null)
         {
@@ -571,24 +439,14 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
 
     private void startEffect(IEntity iEntity, String effectId)
     {
+        if (iEntity == null || !Objects.equals(effectId, this.form.photon_fx.get()))
+        {
+            return;
+        }
+
         try
         {
-            Level world = null;
-
-            try
-            {
-                Method getWorld = iEntity.getClass().getMethod("getWorld");
-                world = (Level) getWorld.invoke(iEntity);
-            }
-            catch (Exception e)
-            {
-                /* Fallback below */
-            }
-
-            if (world == null)
-            {
-                world = Minecraft.getInstance().level;
-            }
+            Level world = BbsRenderBridge.world(iEntity);
 
             if (world == null)
             {
@@ -639,6 +497,10 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 }
 
                 System.out.println("BBSPhoton: Photon particle (" + effectId + ") has been placed successfully.");
+            }
+            else
+            {
+                this.stopCurrentEffect();
             }
         }
         catch (Exception e)

@@ -1,68 +1,35 @@
-# BBS addon hooks & client wiring
+# BBS CML 3.0 addon hooks
 
-## Role
+The host contract is [CML 3.0 ADDONS.md](https://github.com/ElGatoPro300/BBS-CML-3.0/blob/master/docs/ADDONS.md), API version 2.
 
-This document describes how the Photon addon plugs into BBS CML Edition. Functional contract (events, Values, UI patterns): [BBS CML ADDONS.md](https://github.com/ElGatoPro300/BBS-CML-EDITION/blob/master/docs/ADDONS.md).
+## Discovery
 
-## Entrypoints
+`fabric.mod.json` exposes `bbs-addon` (`BBSPhotonAddon`) and `bbs-client-addon` (`BBSPhotonClientAddon`). Both implement `BBSAddonMod` and require API 2. The runtime requires NeoForge and Connector. A separate native NeoForge mod descriptor would make Connector treat the addon as a native mod with no Fabric entrypoints, so there is no duplicate native bootstrap.
 
-From `fabric.mod.json` (also consumed under NeoForge via Connector):
+CML owns discovery, subscription, failure diagnostics, the addon catalog and shutdown. Common registration never references client classes.
 
-| Entrypoint | Class |
-|------------|--------|
-| `bbs-addon` | `elgatopro300.bbsphoton.BBSPhotonAddon` |
-| `bbs-addon-client` | `elgatopro300.bbsphoton.client.BBSPhotonClientAddon` |
+## Common registration
 
-NeoForge bootstrap lives in `BBSPhoton` / `BBSPhotonClient` and registers the BBS addon instances on the BBS event bus when needed.
+| Event | Responsibility |
+| --- | --- |
+| `RegisterFormsEvent` | Register `PhotonForm` under the existing `bbs:photon` ID |
+| `RegisterSourcePacksEvent` | Expose the existing `assets/bbs_photon` folder as `bbs_photon` links |
 
-Depends on: `bbs`, `photon` (and transitive LDLib2 at runtime via gradle).
+## Client registration
 
-## Common / server — `BBSPhotonAddon`
+| Event | Responsibility |
+| --- | --- |
+| `RegisterFormRenderersEvent` | Register `PhotonFormRenderer` |
+| `RegisterFormEditorsEvent` | Register `UIPhotonForm` |
+| `RegisterFormSectionsEvent` | Rebuild the Photon palette entry through `PhotonFormSection` |
+| `RegisterKeyframeEditorsEvent` | Register the FX picker for the `photon_fx` property, including bodypart paths |
+| `RegisterTrackPresentationEvent` | Register the translated Photon FX track label and magenta color |
+| `RegisterL10nEvent` | Register bundled languages with the existing English fallback |
 
-Implements `BBSAddon`:
+There is no global STRING factory override, replay-editor map reflection, late category injection or immediate language reload. `BBSPhotonClient` owns only client tick callbacks and effect cleanup on world exit/process shutdown. The palette thumbnail remains the Photon texture; the track presentation API does not provide a custom icon field.
 
-- `registerForms(RegisterFormsEvent)` → `event.getForms().register(Link.create("bbs:photon"), PhotonForm.class)`
+## Rendering integration
 
-Keep this class free of client-only Photon rendering.
+`BbsFilmPauseProbe` reads the active dashboard's public film-panel state. `BbsRenderBridge` isolates the small number of reflective calls needed because the host distribution uses intermediary Minecraft signatures while the addon uses NeoForge/Mojang names. It unwraps the current screen's menu, retrieves the entity world and reads the pose stack. It does not reflect into private film fields or registries.
 
-## Client — `BBSPhotonClientAddon`
-
-Implements `BBSClientAddon`:
-
-| Event | Action |
-|-------|--------|
-| `RegisterFormsRenderersEvent` | `PhotonFormRenderer` + `UIPhotonForm` panel |
-| `RegisterIconsEvent` | Photon form icon (`PhotonFormRenderer.ICON`) |
-| `RegisterL10nEvent` | `bbs_photon` string packs under `assets/bbs_photon/strings/` |
-| `RegisterDashboardPanelsEvent` | Reserved / empty |
-| `RegisterFormCategoriesEvent` | Deferred — see client init note below |
-
-## Client — `BBSPhotonClient`
-
-Additional wiring that is awkward or unsafe inside the event alone:
-
-1. **Keyframe factory override** — wraps `UIKeyframeFactory.FACTORIES` for `KeyframeFactories.STRING` so sheets named `photon_fx` (or `*/photon_fx`) use `UIPhotonFxKeyframeFactory`.
-2. **Replay editor chrome** — reflection into `UIReplaysEditor` COLORS / icon maps for track appearance (debt: isolate if BBS adds a public API).
-3. **Form category registration** — timed on `ClientLifecycleEvents.CLIENT_STARTED` so it is not overwritten by `BBSResources.init()`.
-4. **Tick cleanup** — `ClientTickEvents` walks `PhotonFormRenderer.activeRenderers` / `checkCleanup()`.
-
-When changing these hooks, re-test: form picker category, film timeline `photon_fx` track UI, and FX cleanup when closing the form editor.
-
-## Localization
-
-- BBS editor strings: `assets/bbs_photon/strings/<lang>.json` via `RegisterL10nEvent`
-- Vanilla-style lang (if present): `assets/bbs_photon/lang/`
-
-UI must use `L10n.lang("bbs_photon....")` / `IKey` — no hardcoded English labels.
-
-## Hard rules
-
-- Register through BBS events whenever possible.
-- Do not fork BBS registration by editing host mod sources.
-- Dependency bumps (BBS or Photon) are explicit maintainer requests only.
-
-## Related
-
-- Form: [photon-form.md](photon-form.md)
-- UI: [ui-photon-editor.md](ui-photon-editor.md)
-- Renderer cleanup: [photon-renderer.md](photon-renderer.md)
+See [CML migration](cml3-migration.md), [renderer](photon-renderer.md) and [editor](ui-photon-editor.md).

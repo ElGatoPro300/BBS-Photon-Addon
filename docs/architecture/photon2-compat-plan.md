@@ -1,5 +1,7 @@
 # Photon 2.2.x compatibility plan
 
+The current host is CML 3.0 addon API 2. Photon remains pinned to 2.2.7; see [CML migration](cml3-migration.md) for observed BBS API changes and runtime verification. The historical Photon phases below describe the already implemented 2.2.7 bridge.
+
 ## Status
 
 | Field | Value |

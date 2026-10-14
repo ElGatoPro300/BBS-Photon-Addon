@@ -4,17 +4,17 @@ This file provides guidance to all AI assistants (Cursor, Antigravity, Claude Co
 
 ## Project Overview
 
-**BBS Photon Addon** integrates [Photon Editor / Photon2](https://github.com/LowDragMC/Photon) particle FX into [BBS CML Edition](https://github.com/ElGatoPro300/BBS-CML-EDITION) as a first-class **form**. Authors can pick a Photon FX id, pause/scrub it with the film editor, and use it on replays like other BBS forms.
+**BBS Photon Addon** integrates [Photon Editor / Photon2](https://github.com/LowDragMC/Photon) particle FX into [BBS CML 3.0](https://github.com/ElGatoPro300/BBS-CML-3.0) as a first-class **form**. Authors can pick a Photon FX id, pause/scrub it with the film editor, and use it on replays like other BBS forms.
 
 This repository is intentionally small and open-source so it can serve as a **reference addon** for people (and AIs) learning the BBS addon API.
 
 ### Runtime target
 
 - **Minecraft**: 1.21.1
-- **Loader**: NeoForge (Sinytra Connector + Forgified Fabric API for Fabric-shaped entrypoints)
-- **Host**: BBS CML Edition
+- **Loader**: NeoForge 21.1.248+ (Sinytra Connector + Forgified Fabric API for Fabric-shaped entrypoints)
+- **Host**: BBS CML 3.0, addon API 2 (see `docs/architecture/cml3-migration.md`)
 - **FX engine**: Photon Editor / Photon2 **`2.2.x`** (compatibility goal: `mc1.21.1-2.2.7-neoforge`)
-- **Effect formats**: legacy **`.fx`** today; planned **`.fxpack`** support (see `docs/architecture/photon2-compat-plan.md`)
+- **Effect formats**: legacy **`.fx`** and mounted **`.fxpack`** effects (see `docs/architecture/photon2-compat-plan.md`)
 - **Assets**: LDLib2 Photon FX folder (`ldlib2/assets/photon/fx`)
 
 Do **not** invent a Fabric-only primary target unless the developer explicitly asks.
@@ -37,7 +37,7 @@ Also keep open:
 
 - `.cursor/rules/PROJECT-STRUCTURE.mdc` (or `.agents/rules/project-structure.md`) — short feature map
 - `docs/architecture/README.md` — deep-dive index
-- Host addon contract (functional): [BBS CML `docs/ADDONS.md`](https://github.com/ElGatoPro300/BBS-CML-EDITION/blob/master/docs/ADDONS.md)
+- Host addon contract (functional): [BBS CML 3.0 `docs/ADDONS.md`](https://github.com/ElGatoPro300/BBS-CML-3.0/blob/master/docs/ADDONS.md)
 
 ## Build Commands
 
@@ -72,13 +72,13 @@ There is no automated test suite — testing is done in-game via `./gradlew runC
 | Form data | `elgatopro300.bbsphoton.forms.PhotonForm` | Domain |
 | Common registration | `BBSPhotonAddon` | Adapter (BBS events) |
 | Client registration | `BBSPhotonClientAddon`, `BBSPhotonClient` | Adapter |
-| Renderer / FX | `client.render.PhotonFormRenderer` | Adapter (Photon + MC) — **debt: oversized** |
+| Renderer / FX | `client.render.PhotonFormRenderer`, `client.render.photon.*` | Adapter (Photon + MC + CML bridges) |
 | Editor UI | `client.gui.UIPhotonForm*` | Adapter (BBS UI) |
 
-Entrypoints (`fabric.mod.json` / NeoForge metadata): `bbs-addon`, `bbs-addon-client`.
+Entrypoints (`fabric.mod.json`, discovered by Connector): `bbs-addon`, `bbs-client-addon`. A native NeoForge descriptor is intentionally absent so Fabric-shaped BBS entrypoints remain discoverable. Metadata requires NeoForge; no native Fabric target is provided.
 
 ## Related Repos
 
-- Host mod: [BBS-CML-EDITION](https://github.com/ElGatoPro300/BBS-CML-EDITION)
-- Greenfield host rewrite (architectural inspiration only): [BBS-CML-3.0](https://github.com/ElGatoPro300/BBS-CML-3.0)
+- Legacy host (functional reference): [BBS-CML-EDITION](https://github.com/ElGatoPro300/BBS-CML-EDITION)
+- Current host: [BBS-CML-3.0](https://github.com/ElGatoPro300/BBS-CML-3.0)
 - This addon: [BBS-Photon-Addon](https://github.com/ElGatoPro300/BBS-Photon-Addon)

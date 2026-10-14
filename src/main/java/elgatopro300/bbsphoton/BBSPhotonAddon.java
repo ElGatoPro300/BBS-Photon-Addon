@@ -1,29 +1,31 @@
 package elgatopro300.bbsphoton;
 
-import mchorse.bbs_mod.addons.BBSAddon;
-import mchorse.bbs_mod.events.Subscribe;
-import mchorse.bbs_mod.events.register.RegisterFormsEvent;
+import mchorse.bbs_mod.api.BBSAddonMod;
+import mchorse.bbs_mod.api.Subscribe;
+import mchorse.bbs_mod.api.events.RegisterFormsEvent;
+import mchorse.bbs_mod.api.events.RegisterSourcePacksEvent;
 import mchorse.bbs_mod.resources.Link;
+import mchorse.bbs_mod.resources.packs.InternalAssetsSourcePack;
 
 import elgatopro300.bbsphoton.forms.PhotonForm;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class BBSPhotonAddon extends BBSAddon
+public class BBSPhotonAddon implements BBSAddonMod
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger("BBS Photon Addon");
-
-    public BBSPhotonAddon()
+    @Override
+    public int requiredApiVersion()
     {
-        LOGGER.info("BBSPhotonAddon instantiated!");
+        return 2;
     }
 
-    @Override
     @Subscribe
     public void registerForms(RegisterFormsEvent event)
     {
-        LOGGER.info("Registering Photon form...");
-        event.getForms().register(Link.create("bbs:photon"), PhotonForm.class);
-        LOGGER.info("Registered Photon form: " + Link.create("bbs:photon"));
+        event.register(Link.create("bbs:photon"), PhotonForm.class);
+    }
+
+    @Subscribe
+    public void registerResources(RegisterSourcePacksEvent event)
+    {
+        event.register(new InternalAssetsSourcePack("bbs_photon", "assets/bbs_photon", BBSPhotonAddon.class));
     }
 }

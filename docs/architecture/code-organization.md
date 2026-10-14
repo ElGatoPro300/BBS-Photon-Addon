@@ -24,19 +24,19 @@ NeoForge uses a single main source set. Client-only code still lives under a `cl
 
 ```text
 elgatopro300.bbsphoton
-├── BBSPhoton.java              # NeoForge / Fabric-shaped bootstrap
-├── BBSPhotonAddon.java         # BBSAddon — register PhotonForm
+├── BBSPhotonAddon.java         # BBSAddonMod — common form / resource events
 ├── forms/
 │   └── PhotonForm.java         # DOMAIN — Values only
 └── client/
-    ├── BBSPhotonClient.java    # Client wiring (keyframes, ticks, categories)
+    ├── BBSPhotonClient.java    # Client tick / shutdown callbacks
     ├── BBSPhotonClientAddon.java
     ├── gui/                    # Form editor + keyframe factory
     └── render/
-        └── PhotonFormRenderer.java   # ADAPTER — FX + draw (oversized; extract)
+        ├── PhotonFormRenderer.java   # ADAPTER — FX lifecycle coordinator
+        └── photon/                  # Photon API and BBS render bridges
 ```
 
-Resources: `src/main/resources/assets/bbs_photon/` (strings, textures, icon), `fabric.mod.json`, `META-INF/neoforge.mods.toml`.
+Resources: `src/main/resources/assets/bbs_photon/` (strings, textures, icon), `fabric.mod.json` (Connector discovery, NeoForge required). See [CML migration](cml3-migration.md).
 
 ---
 

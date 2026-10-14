@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "bbs-photon-addon",
+  "id": "bbs_photon_addon",
   "version": "${version}",
   "name": "BBS Photon Addon",
   "description": "Integration between BBS and Photon particle engine.",
@@ -18,12 +18,12 @@
     "bbs-addon": [
       "elgatopro300.bbsphoton.BBSPhotonAddon"
     ],
-    "bbs-addon-client": [
+    "bbs-client-addon": [
       "elgatopro300.bbsphoton.client.BBSPhotonClientAddon"
     ]
   },
   "depends": {
-    "fabricloader": ">=0.14.21",
+    "fabricloader": ">=0.19.5",
     "minecraft": "~1.21.1",
     "java": ">=21",
     "bbs": "*",
