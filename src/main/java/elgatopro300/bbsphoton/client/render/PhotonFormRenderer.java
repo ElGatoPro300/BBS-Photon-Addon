@@ -35,7 +35,7 @@ import elgatopro300.bbsphoton.forms.PhotonForm;
  * resolve effect id → ensure handle via {@link IPhotonFxBridge} → apply pause →
  * update transform → cleanup when unused.
  *
- * Photon API calls are isolated in {@code PhotonFxBridge}; emitter age-freeze lives in
+ * Photon API calls are isolated in {@code PhotonFxBridge}; full-runtime pause lives in
  * {@code PausableEntityEffectExecutor}; CML integration lives in the BBS bridges.
  * See {@code docs/architecture/photon-renderer.md} and {@code photon2-compat-plan.md}.
  */
@@ -109,16 +109,14 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             return;
         }
 
-        boolean shouldPause = this.desiredPause;
-
         this.currentHandle.setPaused(this.desiredPause);
+    }
 
-        if (shouldPause)
+    public void onClientTickEnd()
+    {
+        if (this.currentHandle != null)
         {
-            /* Set delay=1 while paused so Photon's global tick does not advance the
-             * simulation. The companion setDelayAll(0) call in render3D re-enables the render
-             * pass each frame. */
-            this.currentHandle.setDelayAll(1);
+            this.currentHandle.afterClientTick();
         }
     }
 
@@ -231,11 +229,6 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 {
                     this.currentHandle.setPaused(this.desiredPause);
                 }
-
-                /* Always reset delay to 0 in render3D so Photon's render pass can draw the
-                 * effect this frame. The pause stop-tick is applied in onClientTickStart by
-                 * raising the delay back to 1. */
-                this.currentHandle.setDelayAll(0);
 
                 if (this.dummyEntity != null && this.dummyEntity.isRemoved())
                 {

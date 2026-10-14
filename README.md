@@ -9,7 +9,7 @@ I hope this code helps you with your BBS addons!
 - **Minecraft** 1.21.1 on **NeoForge** (Sinytra Connector)
 - **Host**: [BBS CML 3.0](https://github.com/ElGatoPro300/BBS-CML-3.0), addon API **2**
 - **NeoForge**: 21.1.248 or newer, with Sinytra Connector 2.0.0-beta.12 and Forgified Fabric API
-- **FX engine**: Photon Editor / Photon2 **2.2.7** (NeoForge), including mounted **`.fxpack`** effects
+- **FX engine**: Photon Editor / Photon2 **2.2.8** (NeoForge), including mounted **`.fxpack`** effects
 
 The addon uses Connector to expose its BBS entrypoints. Its metadata requires NeoForge; this is not a native Fabric build. CML 2.x is no longer supported by this branch. The saved form type `bbs:photon` and Value IDs `photon_fx` / `paused` are preserved.
 

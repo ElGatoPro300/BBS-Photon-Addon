@@ -13,7 +13,7 @@ This repository is intentionally small and open-source so it can serve as a **re
 - **Minecraft**: 1.21.1
 - **Loader**: NeoForge 21.1.248+ (Sinytra Connector + Forgified Fabric API for Fabric-shaped entrypoints)
 - **Host**: BBS CML 3.0, addon API 2 (see `docs/architecture/cml3-migration.md`)
-- **FX engine**: Photon Editor / Photon2 **`2.2.x`** (compatibility goal: `mc1.21.1-2.2.7-neoforge`)
+- **FX engine**: Photon Editor / Photon2 **`2.2.x`** (compatibility goal: `mc1.21.1-2.2.8-neoforge`)
 - **Effect formats**: legacy **`.fx`** and mounted **`.fxpack`** effects (see `docs/architecture/photon2-compat-plan.md`)
 - **Assets**: LDLib2 Photon FX folder (`ldlib2/assets/photon/fx`)
 
@@ -51,7 +51,7 @@ Also keep open:
 
 There is no automated test suite — testing is done in-game via `./gradlew runClient`.
 
-**Do not modify gradle configuration** unless the developer explicitly asks (dependency bumps for Photon `2.2.7` are an explicit ask).
+**Do not modify gradle configuration** unless the developer explicitly asks (dependency bumps for Photon `2.2.8` are an explicit ask).
 
 ## Code Style (from CONTRIBUTING.md — strictly enforced)
 

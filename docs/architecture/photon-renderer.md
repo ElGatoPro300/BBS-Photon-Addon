@@ -7,8 +7,8 @@
 | Component | Responsibility |
 | --- | --- |
 | `PhotonFormRenderer` | Effect-ID changes, one-shot completion, pause/seek coordination, dummy host and cleanup |
-| `PhotonFxBridge` / `IPhotonFxHandle` | Photon 2.2.7 load/start/pause/stop/retire, effect discovery and root updates |
-| `PausableEntityEffectExecutor` | Existing emitter age-freeze implementation |
+| `PhotonFxBridge` / `IPhotonFxHandle` | Photon 2.2.8 load/start/pause/stop/retire, effect discovery and root updates |
+| `PausableEntityEffectExecutor` | Runtime-rate pause, root timeline guards, authored-delay preservation and paused-host cleanup |
 | `BbsFilmPauseProbe` | Read the active dashboard's public film-panel state |
 | `BbsRenderBridge` | Intermediary/Mojang access and transformed-stack placement |
 | `BBSPhotonClient` | Tick callbacks and cleanup on world/process exit |
@@ -22,6 +22,10 @@ Picking-only passes do not start, reposition or keep FX alive. F7 exterior previ
 `ensurePlayback` reads explicit CML `previewTick` / `animationTick` values when available and falls back to entity age. Backward seeking resets one-shot completion and restarts the effect. Pause still combines the saved `paused` Value, film-panel state, timeline movement and the existing seek window. This migration does not introduce deterministic resimulation to arbitrary timeline positions.
 
 The inherited CML renderer already applies form, overlay and bodypart transforms. The bridge uses that stack once instead of appending the form transform again. The palette thumbnail uses `bbs_photon:textures/photon_texture.png`.
+
+Pause uses Photon's public `FXRuntime.setRate(0F)` so descendants, including 2.2.8 lights and fog, inherit zero simulation speed. The executor wraps the root tick/frame callbacks to prevent authored root-speed tracks from overriding the pause or advancing interpolated timeline animation. Resume restores the previous runtime rate and root speed. Shader expressions using world or wall-clock time remain outside this simulation pause.
+
+Object start delays are snapshotted on pause and restored at the end of each client tick because Photon decrements them independently of simulation rate. Live playback keeps authored delays; rendering no longer forces every delay to zero. The end-tick hook also checks host liveness while paused, since zero simulation speed skips the normal executor tick callback. No saved form fields change.
 
 ## Lifecycle and shaders
 

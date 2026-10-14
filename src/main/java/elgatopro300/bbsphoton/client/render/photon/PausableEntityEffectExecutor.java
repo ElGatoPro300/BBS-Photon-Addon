@@ -1,11 +1,5 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
-import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
-import com.lowdragmc.photon.client.fx.FX;
-import com.lowdragmc.photon.client.fx.FXRuntime;
-import com.lowdragmc.photon.client.gameobject.IFXObject;
-import com.lowdragmc.photon.client.gameobject.emitter.Emitter;
-
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -14,31 +8,67 @@ import org.joml.Vector3f;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
-/**
- * Entity executor with addon-specific pause and position overrides. Extracted from
- * {@code PhotonFormRenderer} during Phase C so the renderer stops reaching into Photon internals.
- *
- * Pause strategy (today): freeze every emitter's age while paused, restore the stored age on
- * subsequent tick updates. This matches the pre-extraction behavior exactly. The alternative
- * ({@code FXRuntime.setRate(0)}) is being explored in Phase C.5 and is intentionally not applied
- * here yet.
- *
- * Position override: Photon's base {@link EntityEffectExecutor#updateFXObjectFrame} uses
- * {@code entity.getEyePosition(partialTicks)}, which adds the host ArmorStand's eye height
- * (~1.7 blocks) and drifts the FX upward. We render at {@code entity.position()} + the executor
- * offset so the FX stays exactly where the renderer puts the dummy entity.
- */
+import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
+import com.lowdragmc.photon.client.fx.FX;
+import com.lowdragmc.photon.client.fx.FXRuntime;
+import com.lowdragmc.photon.client.gameobject.FXObject;
+import com.lowdragmc.photon.client.gameobject.IFXObject;
+
+/** Full-runtime pause for Photon 2.2.8, including timeline, lights and fog objects. */
 public class PausableEntityEffectExecutor extends EntityEffectExecutor
 {
-    private final Map<IFXObject, Integer> frozenAges = new IdentityHashMap<>();
+    private final Map<FXObject, Integer> pausedDelays = new IdentityHashMap<>();
 
-    private boolean paused = false;
-    private long lastTick = 0L;
+    private boolean paused;
+    private float resumeRate = 1F;
+    private float resumeRootScale = 1F;
 
     public PausableEntityEffectExecutor(FX fx, Level level, Entity entity, AutoRotate autoRotate)
     {
         super(fx, level, entity, autoRotate);
+    }
+
+    @Override
+    public void start()
+    {
+        FXRuntime previous = this.getRuntime();
+        super.start();
+        FXRuntime runtime = this.getRuntime();
+
+        if (runtime == null || runtime == previous || !(runtime.getRoot() instanceof FXObject root))
+        {
+            return;
+        }
+
+        Runnable tick = root.getOnUpdateTick();
+        Consumer<Float> frame = root.getOnUpdateFrame();
+
+        root.setOnUpdateTick(() ->
+        {
+            if (this.paused)
+            {
+                /* Do not evaluate authored root-speed tracks while the BBS clock is frozen. */
+                root.setSelfTimeScale(0F);
+            }
+            else if (tick != null)
+            {
+                tick.run();
+            }
+        });
+        root.setOnUpdateFrame(partialTicks ->
+        {
+            if (!this.paused && frame != null)
+            {
+                frame.accept(partialTicks);
+            }
+        });
+
+        if (this.paused)
+        {
+            this.pauseRuntime(runtime);
+        }
     }
 
     public boolean isPaused()
@@ -48,75 +78,82 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
 
     public void setPaused(boolean paused)
     {
-        if (paused && !this.paused && this.getRuntime() != null)
+        if (this.paused == paused)
         {
-            this.frozenAges.clear();
-
-            for (IFXObject obj : this.getRuntime().objects.values())
-            {
-                if (obj instanceof Emitter emitter)
-                {
-                    this.frozenAges.put(obj, emitter.getAge());
-                }
-            }
-        }
-
-        if (!paused && this.paused)
-        {
-            this.frozenAges.clear();
-        }
-
-        this.paused = paused;
-    }
-
-    @Override
-    public void updateFXObjectTick(IFXObject fxObject)
-    {
-        /* Restore super call to ensure entity death checks are performed.
-         * EntityEffectExecutor.updateFXObjectTick checks if entity is alive and, if not,
-         * destroys the effect and removes it from CACHE. This is critical to prevent
-         * "zombie" effects when the dummy entity is removed. */
-        super.updateFXObjectTick(fxObject);
-
-        if (this.paused)
-        {
-            if (fxObject instanceof Emitter emitter)
-            {
-                Integer frozenAge = this.frozenAges.get(fxObject);
-
-                if (frozenAge == null)
-                {
-                    frozenAge = emitter.getAge();
-                    this.frozenAges.put(fxObject, frozenAge);
-                }
-
-                emitter.setAge(frozenAge);
-            }
-
             return;
         }
 
-        this.lastTick = System.currentTimeMillis();
+        this.paused = paused;
+        FXRuntime runtime = this.getRuntime();
 
-        if (fxObject instanceof Emitter emitter)
+        if (runtime == null)
         {
-            this.frozenAges.put(fxObject, emitter.getAge());
+            return;
+        }
+
+        if (paused)
+        {
+            this.pauseRuntime(runtime);
+        }
+        else
+        {
+            this.restoreDelays();
+            runtime.setRate(this.resumeRate);
+            runtime.getRoot().setSelfTimeScale(this.resumeRootScale);
+            this.pausedDelays.clear();
+        }
+    }
+
+    private void pauseRuntime(FXRuntime runtime)
+    {
+        this.resumeRate = runtime.getRate();
+        this.resumeRootScale = runtime.getRoot().getSelfTimeScale();
+        this.pausedDelays.clear();
+
+        for (IFXObject object : runtime.objects.values())
+        {
+            if (object instanceof FXObject fxObject)
+            {
+                this.pausedDelays.put(fxObject, fxObject.getDelay());
+            }
+        }
+
+        runtime.setRate(0F);
+    }
+
+    /** Runs after Photon's engine tick, before rendering, without changing authored delays. */
+    public void afterClientTick()
+    {
+        FXRuntime runtime = this.getRuntime();
+
+        if (!this.paused || runtime == null)
+        {
+            return;
+        }
+
+        /* A zero simulation rate skips the executor's normal entity-liveness callback. */
+        super.updateFXObjectTick(runtime.getRoot());
+        this.restoreDelays();
+    }
+
+    private void restoreDelays()
+    {
+        for (Map.Entry<FXObject, Integer> entry : this.pausedDelays.entrySet())
+        {
+            entry.getKey().setDelay(entry.getValue());
         }
     }
 
     @Override
     public void updateFXObjectFrame(IFXObject fxObject, float partialTicks)
     {
-        /* Override frame update to handle a potentially dead entity gracefully and to use
-         * entity.position() instead of entity.getEyePosition(), because the dummy ArmorStand's
-         * eye height (~1.7 blocks) would offset the FX. The renderer updates the dummy's
-         * position every frame to the exact target, so position() is correct here. */
         FXRuntime runtime = this.getRuntime();
 
-        if (runtime != null && fxObject == runtime.root)
+        if (runtime != null && fxObject == runtime.root && this.entity.isAlive())
         {
             Vec3 position = this.entity.position();
 
+            /* Keep the form origin instead of adding the dummy ArmorStand's eye height. */
             runtime.root.updatePos(new Vector3f(
                 (float) (position.x + this.offset.x),
                 (float) (position.y + this.offset.y),

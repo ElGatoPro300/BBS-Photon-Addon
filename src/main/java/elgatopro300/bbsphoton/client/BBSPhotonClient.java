@@ -30,6 +30,7 @@ public final class BBSPhotonClient
 
             for (PhotonFormRenderer renderer : this.activeRenderers())
             {
+                renderer.onClientTickEnd();
                 renderer.checkCleanup();
             }
         });

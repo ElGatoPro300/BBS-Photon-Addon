@@ -15,7 +15,7 @@ public interface IPhotonFxHandle
 {
     /**
      * Whether the FX runtime is still playing and still owned by the particle engine
-     * (Photon 2.2.7 {@code isAlive() && isValid()}). Renderers use this to decide whether to
+     * (Photon 2.2.8 {@code isAlive() && isValid()}). Renderers use this to decide whether to
      * restart the effect.
      */
     boolean isAlive();
@@ -30,8 +30,8 @@ public interface IPhotonFxHandle
     boolean isPaused();
 
     /**
-     * Freeze or unfreeze the FX. Freeze semantics are owned by the adapter (today: emitter age
-     * freeze; may be revisited against {@code FXRuntime.setRate(0)} after Phase C.5 conclusion).
+     * Freeze the runtime simulation and timeline, including lights and fog. Resuming restores
+     * its previous playback rate and authored root speed; persistent form data is unchanged.
      */
     void setPaused(boolean paused);
 
@@ -42,9 +42,7 @@ public interface IPhotonFxHandle
     void updateRoot(Vector3f position, Quaternionf rotation, Vector3f scale);
 
     /**
-     * Set the per-tick delay on every runtime object. Used by the renderer to coordinate the
-     * current pause workaround: 0 during live render3D so Photon renders the frame; 1 during
-     * the client tick when paused so Photon does not advance the simulation.
+     * Maintain paused start delays and executor cleanup after the global Photon tick.
      */
-    void setDelayAll(int delay);
+    void afterClientTick();
 }

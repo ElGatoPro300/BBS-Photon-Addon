@@ -1,12 +1,5 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
-import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
-import com.lowdragmc.photon.client.fx.FX;
-import com.lowdragmc.photon.client.fx.FXHelper;
-import com.lowdragmc.photon.client.fx.FXRuntime;
-import com.lowdragmc.photon.client.fx.fxpack.FXPacks;
-import com.lowdragmc.photon.client.gameobject.IFXObject;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -15,10 +8,18 @@ import net.minecraft.world.level.Level;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.annotation.Nullable;
+
+import com.lowdragmc.photon.client.fx.EntityEffectExecutor;
+import com.lowdragmc.photon.client.fx.FX;
+import com.lowdragmc.photon.client.fx.FXHelper;
+import com.lowdragmc.photon.client.fx.FXRuntime;
+import com.lowdragmc.photon.client.fx.fxpack.FXPacks;
+import com.lowdragmc.photon.client.gameobject.IFXObject;
 
 /**
  * Photon {@code 2.2.x} adapter — the single place in this addon that talks to
@@ -243,19 +244,9 @@ public final class PhotonFxBridge implements IPhotonFxBridge
         }
 
         @Override
-        public void setDelayAll(int delay)
+        public void afterClientTick()
         {
-            FXRuntime runtime = this.executor.getRuntime();
-
-            if (runtime == null)
-            {
-                return;
-            }
-
-            for (IFXObject obj : runtime.objects.values())
-            {
-                obj.setDelay(delay);
-            }
+            this.executor.afterClientTick();
         }
 
         PausableEntityEffectExecutor executor()

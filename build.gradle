@@ -60,7 +60,7 @@ dependencies {
 	implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
 	implementation "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
     compileOnly files(providers.gradleProperty('bbs_cml_jar').get())
-    implementation "maven.modrinth:photon-editor:mc1.21.1-2.2.7-neoforge"
+    implementation "maven.modrinth:photon-editor:mc1.21.1-2.2.8-neoforge"
     implementation "maven.modrinth:kilagraph:mc1.21.1-21.1.0.15-neoforge"
     
 }

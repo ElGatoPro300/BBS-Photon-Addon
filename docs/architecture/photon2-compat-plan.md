@@ -1,8 +1,16 @@
 # Photon 2.2.x compatibility plan
 
-The current host is CML 3.0 addon API 2. Photon remains pinned to 2.2.7; see [CML migration](cml3-migration.md) for observed BBS API changes and runtime verification. The historical Photon phases below describe the already implemented 2.2.7 bridge.
+The current host is CML 3.0 addon API 2. Photon is pinned to **2.2.8**, with LDLib **2.2.42** and KilaGraph **21.1.0.15**. See [CML migration](cml3-migration.md) for BBS API changes. The phases below record the historical 2.2.7 migration; the current adaptation is described next.
 
-## Status
+## Photon 2.2.8 adaptation
+
+The [official changelog](https://github.com/Low-Drag-MC/Photon/blob/1.21/CHANGELOG.md) adds dynamic point/spot lights, shadows, volumetric lights and fog volumes, material presets, custom motion spaces, and trail/animation fixes. Comparing the published 2.2.7 and 2.2.8 sources found no changes to the eight core adapter surfaces: `FXRuntime`, `EntityEffectExecutor`, `FXEffectExecutor`, `FXHelper`, `FXPacks`, `IFXObject`, `Emitter`, and `IEffectExecutor`. Existing `.fx` and mounted `.fxpack` discovery/loading remain applicable; no new persistent Value or effect-id format is needed.
+
+The pause adapter now uses `FXRuntime.setRate(0F)` instead of emitter age restoration. Root tick/frame callback guards prevent a `SpeedTrack` targeting root from overriding the pause. Resume restores both the previous runtime rate and root scale. Authored start delays are preserved at end-of-tick rather than replaced with the old `setDelayAll(0/1)` workaround. Paused-host death still destroys the runtime and retires its executor; Photon handles light/fog provider detachment. These calls use public Photon APIs, without new production reflection.
+
+Validation: Java 21 Gradle build passes. An attached development-only probe in a loaded NeoForge client world passes 12 runtime checks without shaders and the same checks with Iris/Caz-Toon 1.2.1 active: light/fog age progression and freeze, timeline tick/frame freeze, root-speed tracks, delay preservation, rate restoration, and dead-host/provider/cache cleanup. Nine additional checks pass for registration, persistence, editor construction, resources and keyframe/palette registration. A separate probe passes light/fog/emitter playback and pause/resume through actual global-engine ticks and render frames both with and without shaders. Probe sources and logs live in ignored `build/validation`. Full interactive form-editor, film-scrub, bodypart/model-block and visual shader review remain manual acceptance checks; the probes do not replace them. Caz-Toon uses Photon's `ENCODED_TARGET` fallback: FX are composited after the pack passes and do not receive its bloom, DOF or fog. Arbitrary shader wall-clock/world-time animation is outside the pause contract, and arbitrary-position deterministic resimulation is not introduced.
+
+## Historical 2.2.7 status
 
 | Field | Value |
 |-------|--------|
@@ -276,7 +284,7 @@ On Photon **`2.2.x`** (verified against `2.2.7`), emitter looping + emission int
 
 ---
 
-## C.5 pause conclusion
+## C.5 pause conclusion (historical; superseded by 2.2.8 adaptation above)
 
 `FXRuntime.setRate(float)` behavior reviewed from the Photon `1.21` `FXRuntime` source:
 
