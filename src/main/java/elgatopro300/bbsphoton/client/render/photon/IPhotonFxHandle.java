@@ -1,7 +1,11 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
+import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
+
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+
+import java.util.List;
 
 /**
  * Opaque handle to a running Photon FX. Hides Photon API types from the renderer so that
@@ -13,6 +17,10 @@ import org.joml.Vector3f;
  */
 public interface IPhotonFxHandle
 {
+    void renderControls(FormRenderingContext context, boolean paused);
+
+    List<String> diagnostics();
+
     /**
      * Whether the FX runtime is still playing and still owned by the particle engine
      * (Photon 2.2.8 {@code isAlive() && isValid()}). Renderers use this to decide whether to

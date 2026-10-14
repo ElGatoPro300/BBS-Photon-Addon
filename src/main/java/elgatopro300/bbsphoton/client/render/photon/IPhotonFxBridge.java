@@ -3,9 +3,10 @@ package elgatopro300.bbsphoton.client.render.photon;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 /**
  * Isolates every Photon FX engine call behind one adapter so the renderer / UI never touch
@@ -17,6 +18,7 @@ import java.util.List;
  */
 public interface IPhotonFxBridge
 {
+    IPhotonFxHandle start(String effectId, Level level, Entity hostEntity, elgatopro300.bbsphoton.forms.PhotonForm form);
     /**
      * Resolve the effect id, create the executor and start the FX attached to {@code hostEntity}.
      * The host entity must already be present in {@code level}; the bridge does not create or

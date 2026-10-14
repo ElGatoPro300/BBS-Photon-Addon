@@ -14,6 +14,7 @@ This index follows the same layout used in [BBS CML Edition](https://github.com/
 | [code-organization.md](code-organization.md) | Package roles, Domain/Adapter boundary, extraction targets |
 | [photon-form.md](photon-form.md) | `PhotonForm` Values, persistence, film tracks |
 | [photon-renderer.md](photon-renderer.md) | FX lifecycle, pause/scrub, cleanup, Iris notes, known debt |
+| [photon-runtime-features.md](photon-runtime-features.md) | Animated parameters, film clock/seeds, lights/fog, object anchors, signal API and isolated post effects |
 | [bbs-addon-hooks.md](bbs-addon-hooks.md) | `BBSAddon` / `BBSClientAddon` registration and client wiring |
 | [ui-photon-editor.md](ui-photon-editor.md) | Form editor panel, effect picker, `photon_fx` keyframe UI |
 | [photon2-compat-plan.md](photon2-compat-plan.md) | Roadmap to Photon **`2.2.7`** + **`.fxpack`** support on NeoForge 1.21.1 |

@@ -1,5 +1,7 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
+import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -55,6 +57,12 @@ public final class PhotonFxBridge implements IPhotonFxBridge
     @Override
     public IPhotonFxHandle start(String effectId, Level level, Entity hostEntity)
     {
+        return this.start(effectId, level, hostEntity, null);
+    }
+
+    @Override
+    public IPhotonFxHandle start(String effectId, Level level, Entity hostEntity, elgatopro300.bbsphoton.forms.PhotonForm form)
+    {
         if (effectId == null || effectId.isEmpty() || level == null || hostEntity == null)
         {
             return null;
@@ -74,9 +82,11 @@ public final class PhotonFxBridge implements IPhotonFxBridge
                 fx, level, hostEntity, EntityEffectExecutor.AutoRotate.NONE
             );
 
+            PhotonRuntimeController controller = form == null ? null : new PhotonRuntimeController(executor, form);
+            executor.setController(controller);
             executor.start();
 
-            return new PhotonFxHandle(executor, hostEntity);
+            return new PhotonFxHandle(executor, hostEntity, controller);
         }
         catch (Exception e)
         {
@@ -135,6 +145,10 @@ public final class PhotonFxBridge implements IPhotonFxBridge
         try
         {
             PausableEntityEffectExecutor executor = handle.executor();
+            if (handle.controller != null)
+            {
+                handle.controller.close();
+            }
             FXRuntime runtime = executor.getRuntime();
 
             if (runtime != null)
@@ -178,11 +192,28 @@ public final class PhotonFxBridge implements IPhotonFxBridge
     {
         private final PausableEntityEffectExecutor executor;
         private final Entity hostEntity;
+        private final PhotonRuntimeController controller;
 
-        PhotonFxHandle(PausableEntityEffectExecutor executor, Entity hostEntity)
+        PhotonFxHandle(PausableEntityEffectExecutor executor, Entity hostEntity, PhotonRuntimeController controller)
         {
             this.executor = executor;
             this.hostEntity = hostEntity;
+            this.controller = controller;
+        }
+
+        @Override
+        public void renderControls(FormRenderingContext context, boolean paused)
+        {
+            if (this.controller != null)
+            {
+                this.controller.render(context, paused);
+            }
+        }
+
+        @Override
+        public List<String> diagnostics()
+        {
+            return this.controller == null ? List.of() : this.controller.diagnostics();
         }
 
         @Override

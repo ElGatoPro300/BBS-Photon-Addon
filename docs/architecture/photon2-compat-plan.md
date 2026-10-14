@@ -12,6 +12,8 @@ Validation: Java 21 Gradle build passes. An attached development-only probe in a
 
 ## Historical 2.2.7 status
 
+The subsequent parameter, film-clock, light/fog, anchor, signal and post-processing integration is documented in [Photon runtime features](photon-runtime-features.md), including the chosen override ownership and resimulation limits.
+
 | Field | Value |
 |-------|--------|
 | **Current phase** | **C2 complete** — picker UX uses hybrid `FXHelper.listAllFX()` + folder actions |

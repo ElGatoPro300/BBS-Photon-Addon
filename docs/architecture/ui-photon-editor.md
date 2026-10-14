@@ -22,6 +22,8 @@ Client UI that edits `PhotonForm` Values and customizes film keyframe editing fo
 - **Paused** â€” `UIToggle` writes `form.paused`.
 - Labels via `L10n.lang("bbs_photon.ui.*")`.
 
+`UIPhotonRuntimePanel` adds parameter, playback/signal, anchor and post-effect panels. Property pickers read `PhotonObjectCatalog` and Photon's post-effect schema; typed controls edit BBS Values. The diagnostic monitor displays the current renderer's latest signal history, unresolved bindings and catch-up counter. See [runtime features](photon-runtime-features.md) for authoring instructions and synchronization limits.
+
 Effect ids remain the same `namespace:path` strings stored in `photon_fx`; `.fxpack` simply mounts more `assets/<namespace>/fx/<path>.fx` resources into Photon.
 
 Do not start Photon runtimes from the panel. Preview rendering goes through `PhotonFormRenderer.renderInUI`.
@@ -48,6 +50,8 @@ Keys live under `assets/bbs_photon/strings/` (e.g. `en_us.json`, `es_es.json`, â
 - `bbs_photon.ui.open_fxpack_folder`
 
 Add new keys for any new widget copy; keep all bundled languages in sync when possible.
+
+All 22 languages listed in CML 3.0's `assets/bbs/assets/languages.json` are bundled with the same 42 addon keys: `ar_ar`, `az_az`, `de_de`, `en_us`, `es_es`, `fa_ir`, `fr_fr`, `he_il`, `hu_hu`, `id_id`, `ko_kr`, `pl_pl`, `pt_br`, `pt_pt`, `ru_ru`, `th_th`, `tr_tr`, `uk_ua`, `ur_pk`, `vi_vn`, `zh_cn`, and `zh_tw`. Files use UTF-8; preserve Unicode characters when editing through shell scripts. The addon registration retains the English fallback for languages supplied by external resource packs.
 
 ## Hard rules
 

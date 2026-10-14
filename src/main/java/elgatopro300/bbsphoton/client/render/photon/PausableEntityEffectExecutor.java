@@ -1,5 +1,7 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -7,6 +9,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -15,6 +18,7 @@ import com.lowdragmc.photon.client.fx.FX;
 import com.lowdragmc.photon.client.fx.FXRuntime;
 import com.lowdragmc.photon.client.gameobject.FXObject;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
+import com.lowdragmc.photon.client.postfx.runtime.PostEffectStack;
 
 /** Full-runtime pause for Photon 2.2.8, including timeline, lights and fog objects. */
 public class PausableEntityEffectExecutor extends EntityEffectExecutor
@@ -24,6 +28,8 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
     private boolean paused;
     private float resumeRate = 1F;
     private float resumeRootScale = 1F;
+    private PhotonRuntimeController controller;
+    private RandomSource seededRandom;
 
     public PausableEntityEffectExecutor(FX fx, Level level, Entity entity, AutoRotate autoRotate)
     {
@@ -33,6 +39,10 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
     @Override
     public void start()
     {
+        if (this.controller != null)
+        {
+            this.seededRandom = this.controller.useSeed() ? RandomSource.create(this.controller.seed()) : null;
+        }
         FXRuntime previous = this.getRuntime();
         super.start();
         FXRuntime runtime = this.getRuntime();
@@ -54,14 +64,35 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
             }
             else if (tick != null)
             {
+                if (this.controller != null)
+                {
+                    this.controller.beforeEvaluation();
+                }
                 tick.run();
+                if (this.controller != null)
+                {
+                    this.controller.afterEvaluation();
+                }
             }
         });
         root.setOnUpdateFrame(partialTicks ->
         {
-            if (!this.paused && frame != null)
+            if (frame != null)
             {
-                frame.accept(partialTicks);
+                if (this.controller != null)
+                {
+                    this.controller.beforeEvaluation();
+                    frame.accept(this.paused ? 0F : partialTicks);
+                    this.controller.afterEvaluation();
+                    if (this.paused)
+                    {
+                        root.setSelfTimeScale(0F);
+                    }
+                }
+                else if (!this.paused)
+                {
+                    frame.accept(partialTicks);
+                }
             }
         });
 
@@ -74,6 +105,48 @@ public class PausableEntityEffectExecutor extends EntityEffectExecutor
     public boolean isPaused()
     {
         return this.paused;
+    }
+
+    public void setController(PhotonRuntimeController controller)
+    {
+        this.controller = controller;
+    }
+
+    public void restart()
+    {
+        if (this.runtime != null)
+        {
+            this.runtime.destroy(true);
+        }
+        List<EntityEffectExecutor> cached = CACHE.get(this.entity);
+        if (cached != null)
+        {
+            cached.remove(this);
+        }
+        this.runtime = null;
+        this.pausedDelays.clear();
+        this.start();
+    }
+
+    @Override
+    public RandomSource getRandomSource()
+    {
+        return this.seededRandom == null ? super.getRandomSource() : this.seededRandom;
+    }
+
+    @Override
+    public void onTimelineSignal(String channel, String name, CompoundTag data, double time)
+    {
+        if (this.controller != null)
+        {
+            this.controller.signal(channel, name, data, time);
+        }
+    }
+
+    @Override
+    public PostEffectStack postEffectSink()
+    {
+        return this.controller == null ? super.postEffectSink() : this.controller.postEffects().sink();
     }
 
     public void setPaused(boolean paused)

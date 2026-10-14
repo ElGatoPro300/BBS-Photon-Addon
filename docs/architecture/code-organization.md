@@ -71,6 +71,8 @@ Implement steps in focused helpers (`PhotonFxBridge`, pause controller, cleanup 
 
 ### 4.3 Finished extractions
 
+Runtime feature ownership is separated into `PhotonRuntimeController`, `PhotonRuntimeParameters`, `PhotonObjectAnchors` and `PhotonPostEffects`. `PhotonObjectCatalog` supplies read-only metadata to `UIPhotonRuntimePanel`; `forms/PhotonBinding`, `PhotonAnchor` and `PhotonValueList` hold host Values only. See [runtime features](photon-runtime-features.md).
+
 If you introduce `PhotonFxBridge`, migrate **all** start/stop/pause call sites. Leaving duplicates in `PhotonFormRenderer` is prohibited (FEATURE-RULES Part 2 §2 / §5).
 
 ### 4.4 Registration via BBS events

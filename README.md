@@ -13,6 +13,8 @@ I hope this code helps you with your BBS addons!
 
 The addon uses Connector to expose its BBS entrypoints. Its metadata requires NeoForge; this is not a native Fabric build. CML 2.x is no longer supported by this branch. The saved form type `bbs:photon` and Value IDs `photon_fx` / `paused` are preserved.
 
+The form editor also provides per-object animated parameters (including lights/fog), optional film synchronization with seed and offset controls, object anchors, local signal events/diagnostics, and animated post processing with isolated previews. See [runtime controls and limitations](docs/architecture/photon-runtime-features.md) before enabling film resimulation.
+
 ## Build against local CML 3.0
 
 Use Java 21. Build the Minecraft 1.21.1 distribution in the sibling `BBS-CML-3.0` checkout first. The default `bbs_cml_jar` property points to its remapped distribution JAR:

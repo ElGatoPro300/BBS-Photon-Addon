@@ -14,6 +14,10 @@ public class UIPhotonForm extends UIForm<PhotonForm>
         
         this.defaultPanel = new UIPhotonFormPanel(this);
         this.registerPanel(this.defaultPanel, L10n.lang("bbs_photon.ui.panel_title"), Icons.PARTICLE);
+        for (String section : new String[]{"parameters", "playback", "anchors", "post"})
+        {
+            this.registerPanel(new UIPhotonRuntimePanel(this, section), L10n.lang("bbs_photon.runtime." + section), Icons.PARTICLE);
+        }
         this.registerDefaultPanels();
     }
 }

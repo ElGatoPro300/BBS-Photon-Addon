@@ -56,6 +56,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
     private Entity dummyEntity;
     private boolean loggedDebug = false;
     private boolean effectCompleted = false;
+    private String lastPlaybackError = "";
     private long lastAttemptTime = 0L;
 
     /* Watchdog to clean up effects when rendering stops (e.g. form closed) */
@@ -109,7 +110,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             return;
         }
 
-        this.currentHandle.setPaused(this.desiredPause);
+        this.currentHandle.setPaused(this.desiredPause || this.form.filmSync.get());
     }
 
     public void onClientTickEnd()
@@ -221,11 +222,11 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         this.ensurePlayback(context, idChanged, exteriorChanged);
 
         /* Update position / rotation every frame for smooth rendering */
-        if (this.currentHandle != null && this.currentHandle.isAlive())
+        if (this.currentHandle != null && (this.currentHandle.isAlive() || this.form.filmSync.get()))
         {
             try
             {
-                if (this.currentHandle.isPaused() != this.desiredPause)
+                if (!this.form.filmSync.get() && this.currentHandle.isPaused() != this.desiredPause)
                 {
                     this.currentHandle.setPaused(this.desiredPause);
                 }
@@ -240,16 +241,34 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
                 }
 
                 this.applyTransformAndUpdateRoot(context, iEntity);
+                if (this.currentHandle != null)
+                {
+                    this.currentHandle.renderControls(context, this.desiredPause);
+                    this.lastPlaybackError = "";
+                }
             }
             catch (Exception e)
             {
-                /* Prevent render crash */
+                this.lastPlaybackError = e.toString();
             }
         }
     }
 
     private void ensurePlayback(FormRenderingContext context, boolean idChanged, boolean exteriorChanged)
     {
+        if (this.form.filmSync.get())
+        {
+            this.desiredPause = this.form.paused.get() || this.isBBSPaused();
+            if (this.currentHandle != null && !this.currentHandle.isAlive() && !this.currentHandle.isFinished())
+            {
+                this.stopCurrentEffect();
+            }
+            if (this.currentHandle == null)
+            {
+                this.startEffect(context.entity, this.form.photon_fx.get());
+            }
+            return;
+        }
         IEntity iEntity = context.entity;
         String effectId = this.form.photon_fx.get();
         long now = System.currentTimeMillis();
@@ -478,7 +497,7 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
             this.dummyEntity.yo = iEntity.getY();
             this.dummyEntity.zo = iEntity.getZ();
 
-            IPhotonFxHandle handle = this.bridge.start(effectId, this.dummyEntity.level(), this.dummyEntity);
+            IPhotonFxHandle handle = this.bridge.start(effectId, this.dummyEntity.level(), this.dummyEntity, this.form);
 
             if (handle != null)
             {
@@ -498,7 +517,21 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         }
         catch (Exception e)
         {
-            /* Swallow — renderer must not crash on startup failure */
+            this.lastPlaybackError = e.toString();
         }
+    }
+
+    public List<String> diagnostics()
+    {
+        List<String> result = new ArrayList<>();
+        if (!this.lastPlaybackError.isBlank())
+        {
+            result.add(this.lastPlaybackError);
+        }
+        if (this.currentHandle != null)
+        {
+            result.addAll(this.currentHandle.diagnostics());
+        }
+        return List.copyOf(result);
     }
 }
