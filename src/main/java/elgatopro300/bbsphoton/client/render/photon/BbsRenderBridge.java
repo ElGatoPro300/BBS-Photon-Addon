@@ -4,6 +4,7 @@ import mchorse.bbs_mod.forms.entities.IEntity;
 import mchorse.bbs_mod.forms.renderers.FormRenderType;
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
 import mchorse.bbs_mod.utils.pose.Transform;
+import mchorse.bbs_mod.ui.framework.UIScreen;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -18,7 +19,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import javax.annotation.Nullable;
 
-/** Isolates intermediary Minecraft signatures in CML's Fabric JAR from the Mojang addon. */
+/** Adapts CML render contexts to Photon's world-space root transform. */
 public final class BbsRenderBridge
 {
     private BbsRenderBridge()
@@ -27,62 +28,20 @@ public final class BbsRenderBridge
     @Nullable
     public static Object currentMenu()
     {
-        Object screen = Minecraft.getInstance().screen;
-
-        if (screen == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            return screen.getClass().getMethod("getMenu").invoke(screen);
-        }
-        catch (ReflectiveOperationException e)
-        {
-            return null;
-        }
+        return UIScreen.getCurrentMenu();
     }
 
     @Nullable
     public static Level world(IEntity entity)
     {
-        if (entity != null)
-        {
-            try
-            {
-                Object world = entity.getClass().getMethod("getWorld").invoke(entity);
+        Level world = entity == null ? null : entity.getWorld();
 
-                if (world instanceof Level level)
-                {
-                    return level;
-                }
-            }
-            catch (ReflectiveOperationException e)
-            {
-                /* Synthetic previews may not expose an accessible world. */
-            }
-        }
-
-        return Minecraft.getInstance().level;
-    }
-
-    @Nullable
-    private static PoseStack stack(FormRenderingContext context)
-    {
-        try
-        {
-            return (PoseStack) context.getClass().getField("stack").get(context);
-        }
-        catch (ReflectiveOperationException | ClassCastException e)
-        {
-            return null;
-        }
+        return world == null ? Minecraft.getInstance().level : world;
     }
 
     public static FxTransform transform(FormRenderingContext context, Transform formTransform)
     {
-        PoseStack stack = stack(context);
+        PoseStack stack = context.stack;
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         Vector3f position = new Vector3f();
         Quaternionf rotation = new Quaternionf();
@@ -101,7 +60,7 @@ public final class BbsRenderBridge
             matrix.getTranslation(position);
             matrix.getUnnormalizedRotation(rotation);
             matrix.getScale(scale);
-            Vec3 origin = camera.getPosition();
+            Vec3 origin = camera.position();
             position.add((float) origin.x, (float) origin.y, (float) origin.z);
         }
         else

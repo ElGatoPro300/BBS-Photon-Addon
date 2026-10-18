@@ -1,6 +1,22 @@
 # CML 3.0 migration
 
-## Target and build
+## Minecraft 26.1.2 target and build
+
+This branch targets Java 25, Minecraft 26.1.2, NeoForge 26.1.2.122, Connector 3.0.0-beta.6, Launchpad 1.10.2 and Forgified Fabric API 0.155.3+26.1.2+3.5.9. Photon is 26.1.2.3, LDLib2 26.1.2.42 and KilaGraph 26.1.0.16. Development shaders use Sodium 0.9.2 / Iris 1.11.4 for NeoForge.
+
+The CML host remains compile-only and defaults to `libs/bbs-cml-3.0-beta-2-26.1.jar`, whose metadata includes 26.1.2. There is no fallback to an arbitrary JAR in `libs`; a missing configured host fails explicitly. `verifyCmlHost` checks addon API presence and Java 25 bytecode, rejecting the old 1.21.1 host. Stage tasks and launches share `game_directory` (default `run`); use `-Pgame_directory=build/validation/client-26.1.2` to isolate tests from personal worlds.
+
+CML and NeoForge now use matching unobfuscated signatures. The addon keeps API 2, `bbs:photon`, all Value IDs, `.fx` / `.fxpack` identifiers and NeoForge + Connector support. See [Photon API differences](photon2-compat-plan.md#minecraft-2612-adaptation).
+
+## Verification on 26.1.2
+
+`build` passes with Java 25. An isolated `runClient` loads `bbs_photon_addon` on COMMON and CLIENT with API 2 and starts a fresh integrated-server flat world. Development-only attached probes pass 25 checks without shaders, then the same checks with Iris/Caz-Toon 1.2.1 active (plus a shader-active assertion).
+
+The checks cover canonical form type, saved effect/pause round trip, extended control copying, renderer registration, editor construction, icon loading, post graph resolution, disabled post-effect request cleanup, runtime start, pause/rate restoration, authored-delay preservation, bounded 100-tick catch-up, completion and backward seek, explicit pause, seed policy and cache retirement. The GPU checks invert the crop from approximately `(0.2, 0.3, 0.4)` to `(0.8, 0.7, 0.6)`, preserve outside pixels, restore framebuffer/scissor/program state and preserve the RGBA16F HDR format and leave no GL error. Probe files and reports remain ignored in `build/validation` and are not shipped.
+
+Interactive world/model-block/bodypart placement, F7, real film exports, signal crossings, light/fog behavior, resource reload and multiple simultaneous forms still require visual acceptance. These probes do not establish universal shader compatibility or historical transform reconstruction. Startup also logs pre-existing host/Connector warnings (including the adapter refmap and host projectile attributes); neither prevents the tested world from loading.
+
+## Historical 1.21.1 target and build
 
 This branch targets Minecraft 1.21.1, NeoForge 21.1.248+, Connector 2.0.0-beta.12, Forgified Fabric API 0.116.7+2.2.0+1.21.1 and CML 3.0 addon API 2. Photon remains pinned to 2.2.7, LDLib2 to 2.2.41 and KilaGraph to 21.1.0.15. No Photon simulation or effect format upgrade is part of this migration.
 

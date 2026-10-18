@@ -1,5 +1,7 @@
 # Photon runtime features: implementation blueprint
 
+For the current Minecraft 26.1.2 port, dependencies, API differences and verification, see [CML migration](cml3-migration.md). The implementation history and probe results below describe the original 1.21.1 feature work.
+
 Status: implemented, with the limits and verification described below. Covers the six requested improvements on Photon 2.2.8, Minecraft 1.21.1, NeoForge + Connector and CML 3.0 addon API 2. No dependency bump or publication is part of this work.
 
 ## Authoring controls

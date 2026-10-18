@@ -1,32 +1,31 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
-
-import net.minecraft.client.renderer.ShaderInstance;
+import mchorse.bbs_mod.graphics.RenderPassState;
 
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.opengl.GlTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL13;
-import org.lwjgl.opengl.GL14;
-import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.lowdragmc.lowdraglib2.client.shader.HDRTarget;
 import com.lowdragmc.photon.client.fx.FXRuntime;
-import com.lowdragmc.photon.client.gameobject.emitter.renderpipeline.RenderPassPipeline;
+import com.lowdragmc.photon.client.render.PhotonFloatTextures;
 import com.lowdragmc.photon.client.postfx.PhotonPostFX;
 import com.lowdragmc.photon.client.postfx.runtime.PostEffectStack;
 import com.lowdragmc.photon.client.postfx.runtime.PostFXTargetPool;
+import com.lowdragmc.photon.client.postfx.runtime.RenderGraphExecutor;
 import elgatopro300.bbsphoton.forms.PhotonBinding;
 import elgatopro300.bbsphoton.forms.PhotonForm;
 
@@ -35,7 +34,8 @@ public final class PhotonPostEffects
 {
     private final PostEffectStack previewStack = new PostEffectStack();
     private boolean preview;
-    private HDRTarget target;
+    private RenderTarget target;
+    private int framebuffer;
     private long submittedFrame = -1L;
 
     public void setPreview(boolean preview)
@@ -82,124 +82,124 @@ public final class PhotonPostEffects
         {
             this.sink().submit(PhotonPostFX.parsePath(form.postEffect.get()), parameters, form.postWeight.get());
         }
-        if (this.preview && this.previewStack.hasPending())
+        if (this.preview)
         {
-            this.renderPreview();
+            if (this.previewStack.wantsExecution())
+            {
+                this.renderPreview();
+            }
+            else
+            {
+                /* Private stacks are not drained by Photon's global frame-end hook. */
+                this.previewStack.onFrameEnd();
+            }
         }
     }
 
     private void renderPreview()
     {
-        int[] viewport = new int[4];
-        GL11.glGetIntegerv(GL11.GL_VIEWPORT, viewport);
-        int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
-        int draw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        PreviewState state = PreviewState.capture();
-        if (viewport[2] <= 0 || viewport[3] <= 0)
+        try (RenderPassState state = new RenderPassState())
         {
-            this.previewStack.onFrameEnd();
-            return;
-        }
-        try
-        {
-            RenderSystem.disableScissor();
-            this.target = RenderPassPipeline.resize(this.target, viewport[2], viewport[3], true);
-            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, draw);
-            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, this.target.frameBufferId);
+            int[] viewport = state.viewport;
+            if (viewport[2] <= 0 || viewport[3] <= 0)
+            {
+                return;
+            }
+            GlStateManager._disableScissorTest();
+            RenderSystem.disableScissorForRenderTypeDraws();
+            this.resize(viewport[2], viewport[3]);
+            this.attach(this.target.getColorTextureView(), this.target.getDepthTextureView());
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, state.draw);
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, this.framebuffer);
             GL30.glBlitFramebuffer(viewport[0], viewport[1], viewport[0] + viewport[2], viewport[1] + viewport[3],
                 0, 0, viewport[2], viewport[3], GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-            RenderTarget output = this.previewStack.consumeAndExecute(this.target, false);
-            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, output.frameBufferId);
-            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, draw);
-            GL30.glBlitFramebuffer(0, 0, viewport[2], viewport[3], viewport[0], viewport[1],
-                viewport[0] + viewport[2], viewport[1] + viewport[3], GL11.GL_COLOR_BUFFER_BIT, GL11.GL_NEAREST);
+            state.restore();
+            GlStateManager._disableScissorTest();
+            RenderSystem.disableScissorForRenderTypeDraws();
+            RenderGraphExecutor.FrameInputs inputs = RenderGraphExecutor.FrameInputs.of(
+                this.target.getColorTextureView(), this.target.getDepthTextureView());
+            GpuTextureView output = this.previewStack.consumeAndExecute(inputs, null);
+            if (output != null)
+            {
+                this.attach(output, null);
+                GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, this.framebuffer);
+                GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, state.draw);
+                GlStateManager._disableScissorTest();
+                GL30.glBlitFramebuffer(0, 0, viewport[2], viewport[3], viewport[0], viewport[1],
+                    viewport[0] + viewport[2], viewport[1] + viewport[3], GL11.GL_COLOR_BUFFER_BIT, GL11.GL_NEAREST);
+                /* Detach pooled output before Photon makes it available to another stack. */
+                this.attach(this.target.getColorTextureView(), this.target.getDepthTextureView());
+            }
         }
         finally
         {
             this.previewStack.onFrameEnd();
-            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, read);
-            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, draw);
-            RenderSystem.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-            state.restore();
         }
     }
 
-    private record PreviewState(boolean depth, boolean blend, boolean cull, boolean depthMask,
-                                boolean scissor, int[] scissorBox, int srcRgb, int dstRgb,
-                                int srcAlpha, int dstAlpha, int program, int activeTexture,
-                                ShaderInstance shader, int[] textures)
+    private void resize(int width, int height)
     {
-        private static PreviewState capture()
+        if (this.framebuffer == 0)
         {
-            int[] box = new int[4];
-            GL11.glGetIntegerv(GL11.GL_SCISSOR_BOX, box);
-            int[] textures = new int[12];
-            for (int i = 0; i < textures.length; i++)
-            {
-                textures[i] = RenderSystem.getShaderTexture(i);
-            }
-            return new PreviewState(GL11.glIsEnabled(GL11.GL_DEPTH_TEST), GL11.glIsEnabled(GL11.GL_BLEND),
-                GL11.glIsEnabled(GL11.GL_CULL_FACE), GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),
-                GL11.glIsEnabled(GL11.GL_SCISSOR_TEST), box, GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB),
-                GL11.glGetInteger(GL14.GL_BLEND_DST_RGB),
-                GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA), GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA),
-                GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM), GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE),
-                RenderSystem.getShader(), textures);
+            this.framebuffer = GL30.glGenFramebuffers();
         }
+        if (this.target == null)
+        {
+            this.target = new PreviewTarget(width, height);
+        }
+        else if (this.target.width != width || this.target.height != height)
+        {
+            this.target.resize(width, height);
+        }
+    }
 
-        private void restore()
-        {
-            if (this.depth)
-            {
-                RenderSystem.enableDepthTest();
-            }
-            else
-            {
-                RenderSystem.disableDepthTest();
-            }
-            if (this.blend)
-            {
-                RenderSystem.enableBlend();
-            }
-            else
-            {
-                RenderSystem.disableBlend();
-            }
-            if (this.cull)
-            {
-                RenderSystem.enableCull();
-            }
-            else
-            {
-                RenderSystem.disableCull();
-            }
-            RenderSystem.depthMask(this.depthMask);
-            RenderSystem.blendFuncSeparate(this.srcRgb, this.dstRgb, this.srcAlpha, this.dstAlpha);
-            if (this.scissor)
-            {
-                RenderSystem.enableScissor(this.scissorBox[0], this.scissorBox[1], this.scissorBox[2], this.scissorBox[3]);
-            }
-            else
-            {
-                RenderSystem.disableScissor();
-            }
-            for (int i = 0; i < this.textures.length; i++)
-            {
-                RenderSystem.setShaderTexture(i, this.textures[i]);
-            }
-            RenderSystem.setShader(() -> this.shader);
-            GlStateManager._glUseProgram(this.program);
-            GlStateManager._activeTexture(this.activeTexture);
-        }
+    private void attach(GpuTextureView color, GpuTextureView depth)
+    {
+        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, this.framebuffer);
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D,
+            ((GlTexture) color.texture()).glId(), color.baseMipLevel());
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D,
+            depth == null ? 0 : ((GlTexture) depth.texture()).glId(), depth == null ? 0 : depth.baseMipLevel());
     }
 
     public void close()
     {
         this.previewStack.onFrameEnd();
+        if (this.framebuffer != 0)
+        {
+            GL30.glDeleteFramebuffers(this.framebuffer);
+            this.framebuffer = 0;
+        }
         if (this.target != null)
         {
             this.target.destroyBuffers();
             this.target = null;
         }
     }
+    private static final class PreviewTarget extends RenderTarget
+    {
+        private PreviewTarget(int width, int height)
+        {
+            super("bbs_photon_preview", true);
+            this.resize(width, height);
+        }
+
+        @Override
+        public void createBuffers(int width, int height)
+        {
+            super.createBuffers(width, height);
+            GpuTexture color = PhotonFloatTextures.createRgba16f("bbs_photon_preview_hdr",
+                GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING, width, height);
+            if (color == null)
+            {
+                this.destroyBuffers();
+                throw new IllegalStateException("Photon could not allocate the HDR preview target");
+            }
+            this.colorTextureView.close();
+            this.colorTexture.close();
+            this.colorTexture = color;
+            this.colorTextureView = RenderSystem.getDevice().createTextureView(color);
+        }
+    }
+
 }

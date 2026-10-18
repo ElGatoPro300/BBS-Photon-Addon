@@ -7,17 +7,17 @@
 | Component | Responsibility |
 | --- | --- |
 | `PhotonFormRenderer` | Effect-ID changes, one-shot completion, pause/seek coordination, dummy host and cleanup |
-| `PhotonFxBridge` / `IPhotonFxHandle` | Photon 2.2.8 load/start/pause/stop/retire, effect discovery and root updates |
+| `PhotonFxBridge` / `IPhotonFxHandle` | Photon 26.1.2.3 load/start/pause/stop/retire, effect discovery and root updates |
 | `PausableEntityEffectExecutor` | Runtime-rate pause, root timeline guards, authored-delay preservation and paused-host cleanup |
 | `BbsFilmPauseProbe` | Read the active dashboard's public film-panel state |
-| `BbsRenderBridge` | Intermediary/Mojang access and transformed-stack placement |
+| `BbsRenderBridge` | Public CML context access and transformed-stack placement |
 | `BBSPhotonClient` | Tick callbacks and cleanup on world/process exit |
 | `PhotonRuntimeController` | Optional film clock, bounded seek, seed, signal history and control ownership |
 | `PhotonRuntimeParameters` / `PhotonObjectCatalog` | Typed per-object overrides and runtime metadata discovery |
 | `PhotonObjectAnchors` | CML attachment resolution and scoped per-object transforms |
 | `PhotonPostEffects` | World requests and cropped preview post-processing with private target cleanup |
 
-The renderer is approximately 510 lines following the CML migration. Reflection into private film fields and Minecraft signature access are no longer scattered through it. `activeRenderers` remains legacy mutable global state; no additional global registry was introduced.
+The renderer is approximately 510 lines following the CML migration. The 26.1.2 adapter changes are documented in [Photon compatibility](photon2-compat-plan.md#minecraft-2612-adaptation). Reflection into private film fields and Minecraft signature access are no longer scattered through it. `activeRenderers` remains legacy mutable global state; no additional global registry was introduced.
 
 ## Render and timeline behavior
 

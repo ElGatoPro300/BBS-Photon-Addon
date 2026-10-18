@@ -3,7 +3,7 @@ package elgatopro300.bbsphoton.client.render.photon;
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
@@ -24,7 +24,7 @@ import com.lowdragmc.photon.client.fx.fxpack.FXPacks;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
 
 /**
- * Photon {@code 2.2.x} adapter — the single place in this addon that talks to
+ * Photon {@code 26.1.x} adapter — the single place in this addon that talks to
  * {@code com.lowdragmc.photon.client.fx.*}. Introduced in Phase C so the renderer stops owning
  * the Photon API, so pause/scrub cleanup can evolve without touching render math, and so that
  * FX stop is always synchronous on the client thread (prevents the stacking leak documented in
@@ -70,7 +70,7 @@ public final class PhotonFxBridge implements IPhotonFxBridge
 
         try
         {
-            ResourceLocation location = ResourceLocation.parse(effectId);
+            Identifier location = Identifier.parse(effectId);
             FX fx = FXHelper.getFX(location);
 
             if (fx == null)
@@ -121,7 +121,7 @@ public final class PhotonFxBridge implements IPhotonFxBridge
 
         try
         {
-            for (ResourceLocation location : FXHelper.listAllFX())
+            for (Identifier location : FXHelper.listAllFX())
             {
                 ids.add(location.toString());
             }

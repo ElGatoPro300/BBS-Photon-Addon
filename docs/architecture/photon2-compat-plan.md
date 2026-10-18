@@ -1,6 +1,20 @@
 # Photon 2.2.x compatibility plan
 
-The current host is CML 3.0 addon API 2. Photon is pinned to **2.2.8**, with LDLib **2.2.42** and KilaGraph **21.1.0.15**. See [CML migration](cml3-migration.md) for BBS API changes. The phases below record the historical 2.2.7 migration; the current adaptation is described next.
+The current host is CML 3.0 addon API 2 on Minecraft 26.1.2 / Java 25. Photon is pinned to **26.1.2.3**, LDLib2 to **26.1.2.42**, and KilaGraph to **26.1.0.16**. The older sections below record the 1.21.1 migration.
+
+## Minecraft 26.1.2 adaptation
+
+NeoForge 26.1.2.122 uses ModDevGradle 2.0.148. Connector 3.0.0-beta.6 now uses Launchpad (1.10.2 in this build); the old adapter userdev plugin and Forgified Fabric Loader pin are removed, following [Connector's development setup](https://github.com/Sinytra/Connector/tree/26.1.x#-developer-guide). Keep the NeoForge Photon artifact and Fabric-shaped BBS entrypoints.
+
+Observed API differences against the published 26.1.x artifacts:
+
+- Minecraft identifiers use `Identifier`; camera position uses `Camera.position()`. CML and NeoForge share unobfuscated Minecraft signatures, so `BbsRenderBridge` now reads `IEntity.getWorld()`, `UIScreen.getCurrentMenu()` and `FormRenderingContext.stack` directly.
+- Core Photon lifecycle, runtime bindings, timeline signals, pause/rate control and FX pack discovery retain the contracts used by the existing adapters. Persistent form Values and effect IDs are unchanged.
+- LDLib's `HDRTarget` and Photon's old `RenderPassPipeline` are absent. `PostEffectStack.hasPending()` becomes `wantsExecution()`; execution receives `RenderGraphExecutor.FrameInputs` and returns a nullable `GpuTextureView`.
+- Preview post processing owns a private `RenderTarget` with a Photon RGBA16F color texture and framebuffer, copies the current viewport's color/depth, executes the private Photon stack, and copies its output back into the same crop. A null output keeps the original pixels. CML's `RenderPassState` restores GPU/GL state and invalidates the command encoder cache. World requests still use `PostEffectStack.GLOBAL`. When custom effects are disabled, the private preview stack is explicitly drained because Photon only clears its own global stacks at frame end.
+- All version-sensitive changes stay in adapters. No Domain changes or saved-data migration are required.
+
+See [current verification](cml3-migration.md#verification-on-2612). Historical probe results below apply to their original 1.21.1 versions.
 
 ## Photon 2.2.8 adaptation
 

@@ -10,10 +10,10 @@ This repository is intentionally small and open-source so it can serve as a **re
 
 ### Runtime target
 
-- **Minecraft**: 1.21.1
-- **Loader**: NeoForge 21.1.248+ (Sinytra Connector + Forgified Fabric API for Fabric-shaped entrypoints)
+- **Minecraft**: 26.1.2
+- **Loader**: NeoForge 26.1.2.122 (Sinytra Connector 3 + Launchpad + Forgified Fabric API for Fabric-shaped entrypoints)
 - **Host**: BBS CML 3.0, addon API 2 (see `docs/architecture/cml3-migration.md`)
-- **FX engine**: Photon Editor / Photon2 **`2.2.x`** (compatibility goal: `mc1.21.1-2.2.8-neoforge`)
+- **FX engine**: Photon Editor / Photon2 **`26.1.x`** (pin: `mc26.1.x-26.1.2.3-neoforge`)
 - **Effect formats**: legacy **`.fx`** and mounted **`.fxpack`** effects (see `docs/architecture/photon2-compat-plan.md`)
 - **Assets**: LDLib2 Photon FX folder (`ldlib2/assets/photon/fx`)
 

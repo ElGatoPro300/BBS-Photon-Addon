@@ -24,9 +24,11 @@
   },
   "depends": {
     "fabricloader": ">=0.19.5",
-    "minecraft": "~1.21.1",
-    "java": ">=21",
+    "minecraft": "~26.1.2",
+    "java": ">=25",
+    "neoforge": ">=26.1.2.112",
+    "connector": ">=3.0.0-beta.6",
     "bbs": "*",
-    "photon": ">=2.2.8"
+    "photon": ">=26.1.2.3"
   }
 }

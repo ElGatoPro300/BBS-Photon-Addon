@@ -16,7 +16,7 @@ If you use AI assistants, they may help with the **Code Contribution Rules**, bu
 - Communicate non-trivial features or dependency bumps (Photon / BBS / NeoForge) with maintainers **before** landing them.
 - Do not rename persisted Value ids (`photon_fx`, `paused`) without an explicit migration plan — saved films and forms depend on them.
 - Do not inflate `PhotonFormRenderer` further; extract bridges/services when adding Photon `2.2.x` work.
-- This project targets **NeoForge 1.21.1** only unless maintainers ask for another loader.
+- This project targets **NeoForge 26.1.2** only unless maintainers ask for another loader.
 
 ## Mandatory rules
 

@@ -1,6 +1,6 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ public final class PhotonObjectCatalog
     public static List<ObjectInfo> inspect(String effectId)
     {
         List<ObjectInfo> result = new ArrayList<>();
-        ResourceLocation location = ResourceLocation.tryParse(effectId);
+        Identifier location = Identifier.tryParse(effectId);
         FX fx = location == null ? null : FXHelper.getFX(location);
         if (fx == null)
         {
