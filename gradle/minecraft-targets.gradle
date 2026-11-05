@@ -1,0 +1,7 @@
+import groovy.json.JsonSlurper
+def targets = new JsonSlurper().parse(file('gradle/minecraft-targets.json'))
+def selected = providers.gradleProperty('mc').getOrElse(project.minecraft_version)
+if (!targets.containsKey(selected)) throw new GradleException("Unsupported Minecraft target: ${selected}. Available: ${targets.keySet()}")
+ext.minecraft_version = selected
+ext.minecraftTarget = targets[selected]
+layout.buildDirectory = file("build/targets/${selected}")

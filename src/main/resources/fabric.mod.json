@@ -1,32 +1,32 @@
 {
-  "schemaVersion": 1,
-  "id": "bbs_photon_addon",
-  "version": "${version}",
-  "name": "BBS Photon Addon",
-  "description": "Integration between BBS and Photon particle engine.",
-  "authors": [
-    "ElGatoPro300"
-  ],
-  "contact": {
-    "homepage": "https://discord.gg/MAHVQBSce6",
-    "sources": "https://github.com/ElGatoPro300/bbs-photon-addon"
-  },
-  "license": "MIT",
-  "icon": "assets/bbs_photon/icon.png",
-  "environment": "*",
-  "entrypoints": {
-    "bbs-addon": [
-      "elgatopro300.bbsphoton.BBSPhotonAddon"
+    "schemaVersion": 1,
+    "id": "bbs_photon_addon",
+    "version": "${version}",
+    "name": "BBS Photon Addon",
+    "description": "Integration between BBS and Photon particle engine.",
+    "authors": [
+        "ElGatoPro300"
     ],
-    "bbs-client-addon": [
-      "elgatopro300.bbsphoton.client.BBSPhotonClientAddon"
-    ]
-  },
-  "depends": {
-    "fabricloader": ">=0.19.5",
-    "minecraft": "~1.21.1",
-    "java": ">=21",
-    "bbs": "*",
-    "photon": ">=2.2.8"
-  }
+    "contact": {
+        "homepage": "https://discord.gg/MAHVQBSce6",
+        "sources": "https://github.com/ElGatoPro300/bbs-photon-addon"
+    },
+    "license": "MIT",
+    "icon": "assets/bbs_photon/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "bbs-addon": [
+            "elgatopro300.bbsphoton.BBSPhotonAddon"
+        ],
+        "bbs-client-addon": [
+            "elgatopro300.bbsphoton.client.BBSPhotonClientAddon"
+        ]
+    },
+    "depends": {
+        "fabricloader": ">=0.19.5",
+        "minecraft": "=${minecraft_version}",
+        "java": ">=${java_version}",
+        "bbs": ">=3.0-beta-7",
+        "photon": ">=2.2.8"
+    }
 }

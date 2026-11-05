@@ -1,4 +1,12 @@
 pluginManagement {
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'net.neoforged.moddev') {
+                def selected = providers.gradleProperty('mc').getOrElse('1.21.1')
+                useVersion(selected.startsWith('26.') ? '2.0.148' : '1.0.21')
+            }
+        }
+    }
 	repositories {
 		maven {
 			name = 'Fabric'

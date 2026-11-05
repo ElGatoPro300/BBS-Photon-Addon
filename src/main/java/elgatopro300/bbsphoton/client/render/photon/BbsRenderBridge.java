@@ -27,62 +27,18 @@ public final class BbsRenderBridge
     @Nullable
     public static Object currentMenu()
     {
-        Object screen = Minecraft.getInstance().screen;
-
-        if (screen == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            return screen.getClass().getMethod("getMenu").invoke(screen);
-        }
-        catch (ReflectiveOperationException e)
-        {
-            return null;
-        }
+        return NativeBbsAccess.currentMenu();
     }
 
     @Nullable
     public static Level world(IEntity entity)
     {
-        if (entity != null)
-        {
-            try
-            {
-                Object world = entity.getClass().getMethod("getWorld").invoke(entity);
-
-                if (world instanceof Level level)
-                {
-                    return level;
-                }
-            }
-            catch (ReflectiveOperationException e)
-            {
-                /* Synthetic previews may not expose an accessible world. */
-            }
-        }
-
-        return Minecraft.getInstance().level;
-    }
-
-    @Nullable
-    private static PoseStack stack(FormRenderingContext context)
-    {
-        try
-        {
-            return (PoseStack) context.getClass().getField("stack").get(context);
-        }
-        catch (ReflectiveOperationException | ClassCastException e)
-        {
-            return null;
-        }
+        return NativeBbsAccess.world(entity);
     }
 
     public static FxTransform transform(FormRenderingContext context, Transform formTransform)
     {
-        PoseStack stack = stack(context);
+        PoseStack stack = NativeBbsAccess.stack(context);
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         Vector3f position = new Vector3f();
         Quaternionf rotation = new Quaternionf();
@@ -101,7 +57,7 @@ public final class BbsRenderBridge
             matrix.getTranslation(position);
             matrix.getUnnormalizedRotation(rotation);
             matrix.getScale(scale);
-            Vec3 origin = camera.getPosition();
+            Vec3 origin = NativeBbsAccess.position(camera);
             position.add((float) origin.x, (float) origin.y, (float) origin.z);
         }
         else

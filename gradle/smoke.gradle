@@ -1,0 +1,19 @@
+sourceSets {
+    portSmoke {
+        java.srcDir file("build/validation/${minecraft_version}/sources")
+        resources.srcDir file("build/validation/${minecraft_version}/resources")
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+    }
+}
+tasks.register('portSmokeJar', Jar) {
+    dependsOn tasks.named('portSmokeClasses')
+    from sourceSets.portSmoke.output
+    archiveFileName = 'addon-port-smoke.jar'
+    destinationDirectory = layout.buildDirectory.dir('smoke')
+}
+tasks.register('stagePortSmoke', Copy) {
+    dependsOn 'portSmokeJar'
+    from tasks.named('portSmokeJar')
+    into file(providers.gradleProperty('game_directory').getOrElse("build/runs/${minecraft_version}") + '/mods')
+}
+tasks.named('runClient') { dependsOn 'stagePortSmoke' }

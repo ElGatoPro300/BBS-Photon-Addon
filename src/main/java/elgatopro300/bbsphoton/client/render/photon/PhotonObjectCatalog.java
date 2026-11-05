@@ -1,12 +1,9 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
-import net.minecraft.resources.ResourceLocation;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import com.lowdragmc.photon.client.fx.FX;
-import com.lowdragmc.photon.client.fx.FXHelper;
 import com.lowdragmc.photon.client.fx.timeline.AnimatedPropertyType;
 import com.lowdragmc.photon.client.gameobject.FXObject;
 import com.lowdragmc.photon.client.gameobject.IFXObject;
@@ -21,8 +18,7 @@ public final class PhotonObjectCatalog
     public static List<ObjectInfo> inspect(String effectId)
     {
         List<ObjectInfo> result = new ArrayList<>();
-        ResourceLocation location = ResourceLocation.tryParse(effectId);
-        FX fx = location == null ? null : FXHelper.getFX(location);
+        FX fx = NativePhotonAssets.effect(effectId);
         if (fx == null)
         {
             return result;

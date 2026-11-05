@@ -48,3 +48,7 @@ Blockbench_full/
 .trae/
 crash-reports/
 open-source/
+
+# Port tooling and local verification
+/gradle/local-runtime.properties
+**/__pycache__/

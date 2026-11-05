@@ -2,6 +2,8 @@
 
 `PhotonFormRenderer` adapts the stable `PhotonForm` Values to live Photon FX. It extends CML 3.0's `FormRenderer<PhotonForm>` and implements `ITickable`.
 
+See [version adapters](../multiversion.md) for the selected NativeBbsAccess and NativePostPreview implementations. Shared playback, parameters and form transforms remain here.
+
 ## Responsibilities
 
 | Component | Responsibility |

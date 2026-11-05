@@ -6,29 +6,23 @@ I hope this code helps you with your BBS addons!
 
 ## Runtime
 
-- **Minecraft** 1.21.1 on **NeoForge** (Sinytra Connector)
-- **Host**: [BBS CML 3.0](https://github.com/ElGatoPro300/BBS-CML-3.0), addon API **2**
-- **NeoForge**: 21.1.248 or newer, with Sinytra Connector 2.0.0-beta.12 and Forgified Fabric API
-- **FX engine**: Photon Editor / Photon2 **2.2.8** (NeoForge), including mounted **`.fxpack`** effects
+One source tree supports **NeoForge + Sinytra Connector** on Minecraft **1.21.1 and 26.1.2**. The exact Photon, LDLib, Connector, FFAPI and NeoForge dependencies are pinned in `gradle/minecraft-targets.json`. CML addon API 2 remains the host contract. The canonical `bbs:photon` form and persistent Value identifiers are preserved.
 
-The addon uses Connector to expose its BBS entrypoints. Its metadata requires NeoForge; this is not a native Fabric build. CML 2.x is no longer supported by this branch. The saved form type `bbs:photon` and Value IDs `photon_fx` / `paused` are preserved.
+The editor provides per-object animated parameters, film synchronization, seeds, anchors, signals and isolated post-effect previews. See [runtime controls](docs/architecture/photon-runtime-features.md) for behavior and limits.
 
-The form editor also provides per-object animated parameters (including lights/fog), optional film synchronization with seed and offset controls, object anchors, local signal events/diagnostics, and animated post processing with isolated previews. See [runtime controls and limitations](docs/architecture/photon-runtime-features.md) before enabling film resimulation.
+## Build
 
-## Build against local CML 3.0
-
-Use Java 21. Build the Minecraft 1.21.1 distribution in the sibling `BBS-CML-3.0` checkout first. The default `bbs_cml_jar` property points to its remapped distribution JAR:
+Run the wrapper with **JDK 25** and place the matching CML distribution JARs in `libs/`:
 
 ```powershell
-./gradlew.bat build
-./gradlew.bat runClient
-# Override the host location when needed:
-./gradlew.bat build "-Pbbs_cml_jar=C:/path/to/bbs-cml-3.0-dev-1-1.21.1.jar"
+./gradlew.bat buildAll
+./gradlew.bat build '-Pmc=1.21.1'
+./gradlew.bat runClient '-Pmc=26.1.2'
 ```
 
-Development launches stage the host and addon JARs into `run/mods` for Connector discovery. Do not add another copy of either mod to that directory. The build does not bundle CML or Photon into the addon JAR.
+All installable JARs appear in `build/libs/`. The default build targets 1.21.1. Development runs stage CML and the addon in `build/runs/<mc>/mods` for Connector discovery. Dependencies are not bundled in release JARs.
 
-Rebuild the companion CML checkout with the Connector compatibility fixes included in this migration. Older local JARs may reject Connector's loader version or fail in host mixins. See [CML 3.0 migration and verification](docs/architecture/cml3-migration.md) for integration details and verification status.
+Use `-PcmlJar=<path>` (or the existing `-Pbbs_cml_jar=<path>`) for one host, or `-PlibDir=<directory>` for a folder with several versions. See [multiversion architecture and validation](docs/multiversion.md) for native adapters, dependency validation and runtime limits.
 
 ## For contributors & AI agents
 

@@ -6,6 +6,8 @@ Deep-dives for **BBS Photon Addon**. The always-on agent index lives in `.cursor
 
 This index follows the same layout used in [BBS CML Edition](https://github.com/ElGatoPro300/BBS-CML-EDITION/blob/master/docs/architecture/README.md) and [BBS CML 3.0](https://github.com/ElGatoPro300/BBS-CML-3.0/blob/master/docs/architecture/README.md), adapted to an addon that bridges BBS forms with Photon FX (not the full film/forms core).
 
+See [shared version adapters and build matrix](../multiversion.md) for the unified 1.21.1 / 26.1.2 base. Historical branch migration documents below remain references for behavior.
+
 ## Core (this addon)
 
 | Doc | Topic |

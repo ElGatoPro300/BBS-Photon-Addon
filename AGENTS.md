@@ -10,6 +10,9 @@ This repository is intentionally small and open-source so it can serve as a **re
 
 ### Runtime target
 
+The shared build now selects the existing 1.21.1 and 26.1.2 NeoForge/Connector targets. See `docs/multiversion.md` and `gradle/minecraft-targets.json`; the original baseline below describes the 1.21.1 family.
+
+
 - **Minecraft**: 1.21.1
 - **Loader**: NeoForge 21.1.248+ (Sinytra Connector + Forgified Fabric API for Fabric-shaped entrypoints)
 - **Host**: BBS CML 3.0, addon API 2 (see `docs/architecture/cml3-migration.md`)

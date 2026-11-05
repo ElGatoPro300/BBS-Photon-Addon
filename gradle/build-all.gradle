@@ -1,0 +1,28 @@
+import groovy.json.JsonSlurper
+apply plugin: 'base'
+tasks.register('buildAll') {
+    group = 'build'
+    description = 'Build every configured Minecraft target and collect production JARs.'
+    doLast {
+        if (!JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_25)) throw new GradleException('buildAll requires JDK 25.')
+        def versions = new JsonSlurper().parse(file('gradle/minecraft-targets.json')).keySet()
+        def wrapper = file(System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') ? 'gradlew.bat' : 'gradlew')
+        versions.each { mc ->
+            logger.lifecycle("Building Minecraft ${mc}")
+            def command = [wrapper.absolutePath, 'build', "-Pmc=${mc}", '--console=plain', '--project-cache-dir', file(".gradle/targets/${mc}").absolutePath]
+            ['libDir', 'cmlJar', 'bbs_cml_jar'].each { key ->
+                if (providers.gradleProperty(key).isPresent()) command.add("-P${key}=" + file(providers.gradleProperty(key).get()).absolutePath)
+            }
+            def result = providers.exec { commandLine command; workingDir projectDir; ignoreExitValue = true }
+            if (result.result.get().exitValue != 0) {
+                logger.error(result.standardOutput.asText.get())
+                logger.error(result.standardError.asText.get())
+                result.result.get().assertNormalExitValue()
+            }
+        }
+        def verification = providers.exec { commandLine 'python', file('tools/verify-targets.py').absolutePath }
+        verification.result.get().assertNormalExitValue()
+        logger.lifecycle(verification.standardOutput.asText.get())
+        logger.lifecycle("Built ${versions.size()} targets. Installable JARs: build/libs/")
+    }
+}

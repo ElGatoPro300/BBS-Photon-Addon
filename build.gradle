@@ -1,126 +1,74 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '1.0.21'
-    id 'org.sinytra.adapter.userdev' version '1.2-SNAPSHOT'
+    id 'net.neoforged.moddev' version '2.0.148' apply false
+    id 'org.sinytra.adapter.userdev' version '1.2-SNAPSHOT' apply false
 }
-
-tasks.named('wrapper', Wrapper).configure {
-    distributionType = Wrapper.DistributionType.BIN
+if (gradle.startParameter.taskNames.any { it.tokenize(':').last() == 'buildAll' }) {
+    apply from: 'gradle/build-all.gradle'
+    return
 }
-
-version = "${project.mod_version}-${project.minecraft_version}"
+apply from: 'gradle/minecraft-targets.gradle'
+def target = minecraftTarget
+def modern = target.namespace == 'official'
+apply plugin: 'net.neoforged.moddev'
+if (!modern) apply plugin: 'org.sinytra.adapter.userdev'
+apply from: 'gradle/local-cml.gradle'
+version = project.mod_version + '-' + minecraft_version
 group = project.mod_group_id
-
-def resolveCmlHostJar = {
-    def configuredPath = providers.gradleProperty('bbs_cml_jar').orNull
-    if (configuredPath != null) {
-        def configuredFile = file(configuredPath)
-        if (configuredFile.isFile()) {
-            return configuredFile
-        }
-    }
-    def localLibs = fileTree(dir: 'libs', include: 'bbs-cml-*.jar')
-    if (!localLibs.empty) {
-        return localLibs.first()
-    }
-    return configuredPath != null ? file(configuredPath) : file('libs/bbs-cml-3.0-beta-1-1.21.1.jar')
-}
-
+base { archivesName = 'bbs-photon-addon' }
 repositories {
-    mavenLocal()
     mavenCentral()
-    maven {
-        name = "Modrinth"
-        url = "https://api.modrinth.com/maven"
-    }
-    maven {
-        name = "Sinytra"
-        url = "https://maven.sinytra.org/"
-    }
-    maven {
-        name = "LocalRepo"
-        url = uri("repo")
-    }
-    flatDir {
-        dirs 'libs'
-    }
+    maven { url = 'https://api.modrinth.com/maven' }
+    maven { url = 'https://maven.sinytra.org/' }
+    maven { url = uri('repo') }
 }
-
+java { toolchain.languageVersion = JavaLanguageVersion.of(target.java) }
+sourceSets.main.java.srcDir "src/platform/${target.adapter}/java"
+def runFolder = file(providers.gradleProperty('game_directory').getOrElse("build/runs/${minecraft_version}"))
 neoForge {
-    version = project.neoforge_version
-
+    version = target.neoforge_version
     runs {
-        client {
-            client()
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-        server {
-            server()
-            programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
+        client { client(); gameDirectory = project.file(providers.gradleProperty('game_directory').getOrElse("build/runs/${minecraft_version}")) }
+        server { server(); gameDirectory = project.file(providers.gradleProperty('game_directory').getOrElse("build/runs/${minecraft_version}")); programArgument '--nogui' }
     }
-
 }
-
 dependencies {
-    // Connector & FFAPI (via Sinytra Maven)
-    additionalRuntimeClasspath "org.sinytra:connector:${project.connector_version}"
-    implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:${project.ffapi_version}"
-    compileOnly "org.sinytra:forgified-fabric-loader:2.5.68+0.18.4+1.21.1"
-
-    // Dependencies
-    implementation "maven.modrinth:ldlib:${project.ldlib2_version}"
-	implementation "maven.modrinth:sodium:mc1.21.1-0.6.13-neoforge"
-	implementation "maven.modrinth:iris:1.8.12+1.21.1-neoforge"
-    compileOnly files({ resolveCmlHostJar() })
-    implementation "maven.modrinth:photon-editor:mc1.21.1-2.2.8-neoforge"
-    implementation "maven.modrinth:kilagraph:mc1.21.1-21.1.0.15-neoforge"
-    
-}
-
-// Connector discovers the intermediary host JAR from the development mods directory.
-def verifyCmlHost = tasks.register('verifyCmlHost') {
-    doLast {
-        def hostJar = resolveCmlHostJar()
-        if (!hostJar.isFile()) {
-            throw new GradleException('Build the CML 3.0 Minecraft 1.21.1 JAR first, or set -Pbbs_cml_jar=<path>.')
-        }
-        new java.util.zip.ZipFile(hostJar).withCloseable { archive ->
-            if (archive.getEntry('mchorse/bbs_mod/api/BBSAddonMod.class') == null) {
-                throw new GradleException('bbs_cml_jar must point to a CML 3.0 distribution JAR, not a sources JAR.')
-            }
-        }
+    if (modern) {
+        implementation "org.sinytra:connector:${target.connector_version}"
+        implementation "org.sinytra.launchpad:launchpad:${target.launchpad_version}"
+    } else {
+        additionalRuntimeClasspath "org.sinytra:connector:${target.connector_version}"
+        compileOnly 'org.sinytra:forgified-fabric-loader:2.5.68+0.18.4+1.21.1'
     }
+    implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:${target.ffapi_version}"
+    implementation "maven.modrinth:ldlib:${target.ldlib2_version}"
+    implementation "maven.modrinth:sodium:${target.sodium}"
+    implementation "maven.modrinth:iris:${target.iris}"
+    implementation "maven.modrinth:photon-editor:${target.photon}"
+    implementation "maven.modrinth:kilagraph:${target.kilagraph}"
+    compileOnly files(localCmlJar)
 }
-
-def stageCmlHost = tasks.register('stageCmlHost', Copy) {
-    dependsOn(verifyCmlHost)
-    from({ resolveCmlHostJar() })
-    into(layout.projectDirectory.dir('run/mods'))
+tasks.register('stageCmlHost', Copy) {
+    from localCmlJar
+    into new File(runFolder, 'mods')
     rename { 'bbs-cml-host.jar' }
 }
-
-def stageConnectorAddon = tasks.register('stageConnectorAddon', Copy) {
-    from(tasks.named('jar'))
-    into(layout.projectDirectory.dir('run/mods'))
+tasks.register('stageConnectorAddon', Copy) {
+    dependsOn tasks.named('jar')
+    from tasks.named('jar')
+    into new File(runFolder, 'mods')
     rename { 'bbs-photon-addon.jar' }
 }
-
-tasks.named('runClient').configure { dependsOn(stageCmlHost, stageConnectorAddon) }
-tasks.named('runServer').configure { dependsOn(stageCmlHost, stageConnectorAddon) }
-tasks.named('compileJava').configure { dependsOn(verifyCmlHost) }
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-    options.release = 21
-}
-
-// Connector discovers BBS entrypoints from Fabric metadata; the runtime remains NeoForge.
+['runClient', 'runServer'].each { name -> tasks.named(name) { dependsOn 'stageCmlHost', 'stageConnectorAddon' } }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = target.java }
 processResources {
-    inputs.property "version", project.version
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
-    }
+    def values = [version: project.version, minecraft_version: minecraft_version, java_version: target.java]
+    inputs.properties values
+    filesMatching('fabric.mod.json') { expand values }
 }
+publishing { publications { mavenJava(MavenPublication) { from components.java } } }
+tasks.register('collectReleaseJar', Copy) { dependsOn tasks.named('jar'); from tasks.named('jar'); into file('build/libs') }
+tasks.named('build') { dependsOn 'collectReleaseJar' }
+
+if (providers.gradleProperty('portSmoke').isPresent()) apply from: 'gradle/smoke.gradle'

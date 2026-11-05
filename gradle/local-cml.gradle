@@ -1,0 +1,36 @@
+import groovy.json.JsonSlurper
+import java.util.jar.Manifest
+import java.util.zip.ZipFile
+
+def configured = providers.gradleProperty('cmlJar').orNull ?: providers.gradleProperty('bbs_cml_jar').orNull
+def directory = file(providers.gradleProperty('libDir').getOrElse('libs'))
+def candidates = configured == null ? (directory.listFiles()?.findAll { it.name.endsWith('.jar') } ?: []) : [file(configured)]
+def expected = minecraftTarget.cml
+
+def entries = candidates.collect { jar ->
+    if (!jar.isFile()) throw new GradleException("Missing CML dependency: ${jar}")
+    new ZipFile(jar).withCloseable { zip ->
+        def meta = zip.getEntry('fabric.mod.json')
+        if (meta == null) return null
+        def mod = zip.getInputStream(meta).withCloseable { new JsonSlurper().parse(it) }
+        if (mod.id != 'bbs') return null
+        if (zip.getEntry('mchorse/bbs_mod/api/BBSAddonMod.class') == null) {
+            throw new GradleException("CML host does not expose addon API 2: ${jar}")
+        }
+        def attributes = zip.getInputStream(zip.getEntry('META-INF/MANIFEST.MF')).withCloseable { new Manifest(it).mainAttributes }
+        [file: jar, version: mod.version, minecraft: attributes.getValue('Fabric-Minecraft-Version'), namespace: attributes.getValue('Fabric-Mapping-Namespace')]
+    }
+}.findAll { it != null && (configured != null || it.minecraft == expected) }
+if (entries.size() != 1) throw new GradleException("Expected one CML distribution for ${expected} in ${directory}; found ${entries.size()}. Use -PcmlJar=<path> to select it.")
+def entry = entries.first()
+if (entry.minecraft != expected || entry.namespace != minecraftTarget.namespace) {
+    throw new GradleException("Incompatible CML dependency ${entry.file}: ${entry.minecraft}/${entry.namespace}; expected ${expected}/${minecraftTarget.namespace}.")
+}
+if (entry.version.toString().startsWith('3.0-beta-1-')) {
+    throw new GradleException("CML beta 1 has incompatible legacy mixins; use a beta-2 or newer distribution for ${expected}.")
+}
+def requiredHost = providers.gradleProperty('cml_version').getOrElse('3.0-beta-7')
+if (!entry.version.toString().startsWith(requiredHost + '-')) {
+    throw new GradleException("Expected CML ${requiredHost}; found ${entry.version} in ${entry.file}")
+}
+ext.localCmlJar = entry.file
