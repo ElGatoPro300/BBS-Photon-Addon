@@ -56,6 +56,7 @@ public final class AddonClientSmoke implements ClientModInitializer
     private void check()
     {
         PhotonForm form = new PhotonForm();
+        System.out.println("[Addon host] " + form.getClass().getProtectionDomain().getCodeSource().getLocation());
         form.photon_fx.set("photon:validation");
         form.paused.set(true);
         form.filmSync.set(true);

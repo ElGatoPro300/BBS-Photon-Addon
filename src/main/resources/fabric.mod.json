@@ -16,10 +16,16 @@
     "environment": "*",
     "entrypoints": {
         "bbs-addon": [
-            "elgatopro300.bbsphoton.BBSPhotonAddon"
+            {
+                "adapter": "photon-host",
+                "value": "elgatopro300.bbsphoton.BBSPhotonAddon"
+            }
         ],
         "bbs-client-addon": [
-            "elgatopro300.bbsphoton.client.BBSPhotonClientAddon"
+            {
+                "adapter": "photon-host",
+                "value": "elgatopro300.bbsphoton.client.BBSPhotonClientAddon"
+            }
         ]
     },
     "depends": {
@@ -28,5 +34,8 @@
         "java": ">=${java_version}",
         "bbs": ">=3.0-beta-7",
         "photon": ">=2.2.8"
+    },
+    "languageAdapters": {
+        "photon-host": "elgatopro300.bbsphoton.compat.host.HostLanguageAdapter"
     }
 }

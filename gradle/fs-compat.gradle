@@ -1,0 +1,38 @@
+import groovy.json.JsonSlurper
+
+def manifest = new JsonSlurper().parse(file('gradle/fs-hosts.json'))
+def fs = manifest.targets[minecraft_version]
+def compilingFs = providers.gradleProperty('fsCompileOnly').isPresent()
+if (compilingFs) {
+    if (fs == null) throw new GradleException("No published FS target for ${minecraft_version}")
+    layout.buildDirectory = file("build/fs-compat/${minecraft_version}/classes-build")
+    sourceSets.main.java.setSrcDirs([file("build/fs-compat/${minecraft_version}/sources/main/java")])
+    sourceSets.main.resources.setSrcDirs([])
+    if (sourceSets.findByName('client') != null) {
+        sourceSets.client.java.setSrcDirs([file("build/fs-compat/${minecraft_version}/sources/client/java")])
+        sourceSets.client.resources.setSrcDirs([])
+    }
+} else if (fs != null) {
+    def compileFs = tasks.register('compileFsCompatibility', Exec) {
+        inputs.files(fileTree('src') { include '**/*.java' }, fileTree('tools') { include '*_fs.py' }, fileTree('gradle'))
+        outputs.dir file("build/fs-compat/${minecraft_version}/classes-build/classes/java")
+        environment 'JAVA_HOME', System.getProperty('java.home')
+        commandLine 'python', 'tools/build_fs.py', '--mc', minecraft_version
+    }
+    tasks.named('jar') {
+        dependsOn compileFs
+        from(file("build/fs-compat/${minecraft_version}/classes-build/classes/java/main"))
+        if (sourceSets.findByName('client') != null) {
+            from(file("build/fs-compat/${minecraft_version}/classes-build/classes/java/client"))
+        }
+    }
+    tasks.named('processResources') {
+        inputs.file file('gradle/fs-hosts.json')
+        doLast {
+            def metadata = new File(destinationDir, 'fabric.mod.json')
+            def values = new JsonSlurper().parse(metadata)
+            values.depends.bbs = ['>=3.0-beta-7', '=' + fs.version]
+            metadata.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(values)) + '\n'
+        }
+    }
+}

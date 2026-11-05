@@ -1,0 +1,12 @@
+{
+    "package": "elgatopro300.bbsphoton",
+    "targets": {
+        "1.21.1": {
+            "version": "2.7-1.21.1",
+            "version_id": "fY89JLFA",
+            "filename": "bbs-2.7-1.21.1.jar",
+            "url": "https://cdn.modrinth.com/data/ZeRO0IDA/versions/fY89JLFA/bbs-2.7-1.21.1.jar",
+            "sha512": "76cd3f1274953f604b63dd7ff2e7324f6a4c78f3094be2688c6641ffcc758b7bde4402977cd528a0b2c359aa936075a6a89d5b65667e51d08c033a9a117d2077"
+        }
+    }
+}

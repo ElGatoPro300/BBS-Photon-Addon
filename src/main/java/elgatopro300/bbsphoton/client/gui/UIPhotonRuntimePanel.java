@@ -78,7 +78,7 @@ public class UIPhotonRuntimePanel extends UIFormPanel<PhotonForm>
 
     private UISection group(IKey title, String id)
     {
-        UISection group = new UISection(title).stateId("bbs_photon." + this.section + "." + id);
+        UISection group = HostSections.create(title, "bbs_photon." + this.section + "." + id);
         this.options.add(group);
         return group;
     }

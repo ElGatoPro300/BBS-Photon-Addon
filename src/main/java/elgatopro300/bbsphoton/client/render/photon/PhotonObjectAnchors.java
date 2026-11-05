@@ -1,6 +1,5 @@
 package elgatopro300.bbsphoton.client.render.photon;
 
-import mchorse.bbs_mod.film.BaseFilmController;
 import mchorse.bbs_mod.forms.FormUtils;
 import mchorse.bbs_mod.forms.FormUtilsClient;
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
@@ -49,7 +48,7 @@ public final class PhotonObjectAnchors
             return;
         }
         MatrixCache matrices = FormUtilsClient.getRenderer(FormUtils.getRoot(form)).collectMatrices(context.entity, context.getTransition());
-        Matrix4f world = BaseFilmController.getMatrixForRenderWithRotation(context.entity, 0D, 0D, 0D, context.getTransition());
+        Matrix4f world = HostRenderAccess.world(context);
         MatrixCacheEntry own = matrices.get(FormUtils.getPath(form));
         if (own.matrix() != null && Math.abs(own.matrix().determinant()) > 0.000001F)
         {

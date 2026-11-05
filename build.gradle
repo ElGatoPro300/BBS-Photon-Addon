@@ -13,7 +13,14 @@ def target = minecraftTarget
 def modern = target.namespace == 'official'
 apply plugin: 'net.neoforged.moddev'
 if (!modern) apply plugin: 'org.sinytra.adapter.userdev'
-apply from: 'gradle/local-cml.gradle'
+if (providers.gradleProperty('fsCompileOnly').isPresent()) {
+    def hosts = new groovy.json.JsonSlurper().parse(file('gradle/fs-hosts.json'))
+    def fs = hosts.targets[minecraft_version]
+    if (fs == null) throw new GradleException("No FS host for ${minecraft_version}")
+    ext.localCmlJar = file("build/fs-compat/${minecraft_version}/${fs.filename}")
+} else {
+    apply from: 'gradle/local-cml.gradle'
+}
 version = project.mod_version + '-' + minecraft_version
 group = project.mod_group_id
 base { archivesName = 'bbs-photon-addon' }
@@ -50,9 +57,10 @@ dependencies {
     compileOnly files(localCmlJar)
 }
 tasks.register('stageCmlHost', Copy) {
-    from localCmlJar
+    def fs = new groovy.json.JsonSlurper().parse(file('gradle/fs-hosts.json')).targets[minecraft_version]
+    from providers.gradleProperty('smokeHost').getOrElse('cml') == 'fs' ? file("build/fs-compat/${minecraft_version}/${fs.filename}") : localCmlJar
     into new File(runFolder, 'mods')
-    rename { 'bbs-cml-host.jar' }
+    rename { providers.gradleProperty('smokeHost').getOrElse('cml') == 'fs' ? fs.filename : 'bbs-cml-host.jar' }
 }
 tasks.register('stageConnectorAddon', Copy) {
     dependsOn tasks.named('jar')
@@ -72,3 +80,5 @@ tasks.register('collectReleaseJar', Copy) { dependsOn tasks.named('jar'); from t
 tasks.named('build') { dependsOn 'collectReleaseJar' }
 
 if (providers.gradleProperty('portSmoke').isPresent()) apply from: 'gradle/smoke.gradle'
+
+apply from: 'gradle/fs-compat.gradle'

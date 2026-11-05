@@ -8,7 +8,6 @@ import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
 import mchorse.bbs_mod.graphics.texture.Texture;
 import mchorse.bbs_mod.resources.Link;
 import mchorse.bbs_mod.ui.framework.UIContext;
-import mchorse.bbs_mod.ui.model_blocks.UIModelBlockPanel;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -25,6 +24,7 @@ import java.util.Objects;
 
 import elgatopro300.bbsphoton.client.render.photon.BbsFilmPauseProbe;
 import elgatopro300.bbsphoton.client.render.photon.BbsRenderBridge;
+import elgatopro300.bbsphoton.client.render.photon.HostRenderAccess;
 import elgatopro300.bbsphoton.client.render.photon.IPhotonFxBridge;
 import elgatopro300.bbsphoton.client.render.photon.IPhotonFxHandle;
 import elgatopro300.bbsphoton.client.render.photon.PhotonFxBridge;
@@ -152,11 +152,11 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         this.lastRenderTime = System.currentTimeMillis();
         IEntity iEntity = context.entity;
 
-        /* F7 exterior (UIModelBlockPanel.toggleRendering): BBS suppresses the in-UI form draw
+        /* F7 exterior (HostRenderAccess.exterior()): BBS suppresses the in-UI form draw
          * but UIPickableFormRenderer still runs a PREVIEW pass for stencil picking on the
          * full-screen immersive viewport. That PREVIEW must not drive Photon FX, or it
          * alternates with MODEL_BLOCK every frame (restarts / World-trail stretch). */
-        boolean exterior = UIModelBlockPanel.toggleRendering;
+        boolean exterior = HostRenderAccess.exterior();
         boolean previewPath = context.modelRenderer || context.type == FormRenderType.PREVIEW;
 
         if (exterior && previewPath)
@@ -273,14 +273,14 @@ public class PhotonFormRenderer extends FormRenderer<PhotonForm> implements ITic
         String effectId = this.form.photon_fx.get();
         long now = System.currentTimeMillis();
         boolean entityContext = context.type == FormRenderType.ENTITY;
-        boolean timelineContext = entityContext || Float.isFinite(context.previewTick);
+        boolean timelineContext = entityContext || Float.isFinite(HostRenderAccess.preview(context));
         boolean filmPlaying;
         boolean backwardSeeked = false;
         boolean bbsPaused = timelineContext && this.isBBSPaused();
 
         if (timelineContext && iEntity != null)
         {
-            float timelineTick = Float.isFinite(context.previewTick) ? context.previewTick : context.animationTick;
+            float timelineTick = Float.isFinite(HostRenderAccess.preview(context)) ? HostRenderAccess.preview(context) : HostRenderAccess.animation(context);
             int renderTick = Float.isFinite(timelineTick) ? (int) Math.floor(timelineTick) : iEntity.getAge();
             int previousTick = this.lastRenderTick;
 

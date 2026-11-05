@@ -17,3 +17,7 @@ tasks.register('stagePortSmoke', Copy) {
     into file(providers.gradleProperty('game_directory').getOrElse("build/runs/${minecraft_version}") + '/mods')
 }
 tasks.named('runClient') { dependsOn 'stagePortSmoke' }
+
+sourceSets.portSmoke.compileClasspath += files("build/fs-compat/${minecraft_version}/classes-build/classes/java/main")
+
+tasks.named('compilePortSmokeJava') { dependsOn { tasks.findByName('compileFsCompatibility') == null ? [] : [tasks.named('compileFsCompatibility')] } }

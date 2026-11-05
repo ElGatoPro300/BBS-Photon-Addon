@@ -85,7 +85,7 @@ public final class PhotonRuntimeController
     public void render(FormRenderingContext context, boolean paused)
     {
         boolean sync = this.form.filmSync.get();
-        float tick = Float.isFinite(context.previewTick) ? context.previewTick : context.animationTick;
+        float tick = Float.isFinite(HostRenderAccess.preview(context)) ? HostRenderAccess.preview(context) : HostRenderAccess.animation(context);
         boolean sampled = Float.isFinite(tick);
         float offset = PhotonRuntimeParameters.finite(this.form.startOffset.get());
         float speed = this.form.speedOverride.get() ? this.form.speed.get() : 1F;

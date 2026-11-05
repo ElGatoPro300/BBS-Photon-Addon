@@ -36,3 +36,8 @@ Before changing code, read:
 Host addon API reference: [BBS CML 3.0 `docs/ADDONS.md`](https://github.com/ElGatoPro300/BBS-CML-3.0/blob/master/docs/ADDONS.md).
 
 See `LICENSE.md` for information about the license.
+
+## BBS FS compatibility
+
+The same release JAR selects CML or the supported published FS host automatically.
+See [host compatibility](docs/fs-compatibility.md) for supported targets, reproducible builds and validation.
