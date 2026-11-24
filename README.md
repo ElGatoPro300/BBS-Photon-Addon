@@ -12,7 +12,7 @@ The editor provides per-object animated parameters, film synchronization, seeds,
 
 ## Build
 
-Run the wrapper with **JDK 25** and place the matching CML distribution JARs in `libs/`:
+Run the wrapper with **JDK 25**. It downloads the pinned **CML 3.0 beta 9** distribution from Modrinth automatically:
 
 ```powershell
 ./gradlew.bat buildAll
@@ -22,7 +22,7 @@ Run the wrapper with **JDK 25** and place the matching CML distribution JARs in 
 
 All installable JARs appear in `build/libs/`. The default build targets 1.21.1. Development runs stage CML and the addon in `build/runs/<mc>/mods` for Connector discovery. Dependencies are not bundled in release JARs.
 
-Use `-PcmlJar=<path>` (or the existing `-Pbbs_cml_jar=<path>`) for one host, or `-PlibDir=<directory>` for a folder with several versions. See [multiversion architecture and validation](docs/multiversion.md) for native adapters, dependency validation and runtime limits.
+The published CML files and SHA-512 hashes are pinned in `gradle/cml-hosts.json` and cached under `build/cml-hosts/`. No local CML build or manual JAR is needed. See [multiversion architecture and validation](docs/multiversion.md) for dependency checks and runtime limits.
 
 ## For contributors & AI agents
 

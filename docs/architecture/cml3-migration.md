@@ -1,5 +1,7 @@
 # CML 3.0 migration
 
+Current host provisioning uses the published Modrinth beta pinned in `gradle/cml-hosts.json`; see [multiversion build](../multiversion.md). The local-host paths and older dependency versions below document the original migration, not the current build configuration.
+
 ## Target and build
 
 This branch targets Minecraft 1.21.1, NeoForge 21.1.248+, Connector 2.0.0-beta.12, Forgified Fabric API 0.116.7+2.2.0+1.21.1 and CML 3.0 addon API 2. Photon remains pinned to 2.2.7, LDLib2 to 2.2.41 and KilaGraph to 21.1.0.15. No Photon simulation or effect format upgrade is part of this migration.

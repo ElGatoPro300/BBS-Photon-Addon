@@ -44,6 +44,11 @@ def main():
             source.with_name('Bbs2ClientChecks.java').write_text(extra, encoding='utf-8')
             text = text.replace('        require(UIFormEditor.createPanel(form)',
                                 '        Bbs2ClientChecks.check(form);\n        require(UIFormEditor.createPanel(form)')
+        if mc.startswith('26.') and not args.server:
+            extra = (ROOT / 'tools/smoke/ModernPaletteChecks.java').read_text(encoding='utf-8')
+            source.with_name('ModernPaletteChecks.java').write_text(extra, encoding='utf-8')
+            text = text.replace('categories.setup();', 'ModernPaletteChecks.setup(categories);')
+            text = text.replace('categories.getAllCategories()', 'ModernPaletteChecks.categories(categories)')
         source.write_text(text, encoding='utf-8')
         resources = output / (args.host + '-' + side + '-resources')
         resources.mkdir(parents=True, exist_ok=True)
@@ -61,6 +66,11 @@ def main():
         if not production.is_file():
             parser.error('Build the production release first: ' + str(production))
         before = hashlib.sha512(production.read_bytes()).hexdigest()
+        cml_hosts = json.loads((ROOT / 'gradle/cml-hosts.json').read_text())
+        host_spec = cml_hosts['targets'][mc] if args.host == 'cml' else hosts['targets'][mc]
+        host_jar = ROOT / ('build/cml-hosts' if args.host == 'cml' else 'build/' + args.host + '-compat') / mc / host_spec['filename']
+        if hashlib.sha512(host_jar.read_bytes()).hexdigest() != host_spec['sha512']:
+            parser.error('Host distribution does not match its published SHA-512')
         if args.server:
             server_dir = output / (args.host + '-server')
             server_dir.mkdir(parents=True, exist_ok=True)
@@ -80,10 +90,12 @@ def main():
                 status = -1
         text = log_path.read_text(encoding='utf-8', errors='replace')
         passed = status == 0 and marker in text and 'BUILD SUCCESSFUL' in text[text.rfind(marker):]
+        passed = passed and '[Addon host version] ' + host_spec['version'] in text
+        passed = passed and hashlib.sha512(host_jar.read_bytes()).hexdigest() == host_spec['sha512']
         passed = passed and before == hashlib.sha512(production.read_bytes()).hexdigest()
         passed = passed and before == hashlib.sha512(jars[0].read_bytes()).hexdigest()
         results.append({'host': args.host, 'minecraft': mc, 'passed': passed, 'exit': status,
-                        'production_sha512': before, 'log': str(log_path.relative_to(ROOT))})
+                        'production_sha512': before, 'host_version': host_spec['version'], 'host_sha512': host_spec['sha512'], 'log': str(log_path.relative_to(ROOT))})
         print('PASS' if passed else 'FAIL', args.host, mc, str(log_path), flush=True)
     (ROOT / ('build/validation/' + side + 's-' + args.host + '.json')).write_text(json.dumps(results, indent=4) + '\n', encoding='utf-8')
     if not all(r['passed'] for r in results):

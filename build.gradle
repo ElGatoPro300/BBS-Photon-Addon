@@ -19,9 +19,9 @@ if (compatHost != null) {
     def hosts = new groovy.json.JsonSlurper().parse(file("gradle/${compatHost ?: 'fs'}-hosts.json"))
     def fs = hosts.targets[minecraft_version]
     if (fs == null) throw new GradleException("No FS host for ${minecraft_version}")
-    ext.localCmlJar = file("build/${compatHost}-compat/${minecraft_version}/${fs.filename}")
+    ext.bbsHostJar = file("build/${compatHost}-compat/${minecraft_version}/${fs.filename}")
 } else {
-    apply from: 'gradle/local-cml.gradle'
+    apply from: 'gradle/cml-host.gradle'
 }
 version = project.mod_version + '-' + minecraft_version
 group = project.mod_group_id
@@ -56,12 +56,12 @@ dependencies {
     implementation "maven.modrinth:iris:${target.iris}"
     implementation "maven.modrinth:photon-editor:${target.photon}"
     implementation "maven.modrinth:kilagraph:${target.kilagraph}"
-    compileOnly files(localCmlJar)
+    compileOnly files(bbsHostJar)
 }
 tasks.register('stageCmlHost', Copy) {
     def host = providers.gradleProperty('smokeHost').getOrElse('cml')
     def fs = new groovy.json.JsonSlurper().parse(file("gradle/${host == 'cml' ? 'fs' : host}-hosts.json")).targets[minecraft_version]
-    from host != 'cml' ? file("build/${host}-compat/${minecraft_version}/${fs.filename}") : localCmlJar
+    from host != 'cml' ? file("build/${host}-compat/${minecraft_version}/${fs.filename}") : bbsHostJar
     into new File(runFolder, 'mods')
     rename { host != 'cml' ? fs.filename : 'bbs-cml-host.jar' }
 }
@@ -74,7 +74,7 @@ tasks.register('stageConnectorAddon', Copy) {
 ['runClient', 'runServer'].each { name -> tasks.named(name) { dependsOn 'stageCmlHost', 'stageConnectorAddon' } }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = target.java }
 processResources {
-    def values = [version: project.version, minecraft_version: minecraft_version, java_version: target.java]
+    def values = [version: project.version, minecraft_version: minecraft_version, java_version: target.java, cml_minimum_version: cmlMinimumVersion]
     inputs.properties values
     filesMatching('fabric.mod.json') { expand values }
     filesMatching('*bbs2.mixins.json') { expand java_version: target.java }

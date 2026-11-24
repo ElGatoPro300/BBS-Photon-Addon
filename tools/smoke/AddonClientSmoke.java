@@ -10,6 +10,7 @@ import mchorse.bbs_mod.ui.forms.editors.UIFormEditor;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.loader.api.FabricLoader;
 
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
@@ -59,6 +60,7 @@ public final class AddonClientSmoke implements ClientModInitializer
 
     private void check()
     {
+        System.out.println("[Addon host version] " + FabricLoader.getInstance().getModContainer("bbs").orElseThrow().getMetadata().getVersion().getFriendlyString());
         PhotonForm form = new PhotonForm();
         System.out.println("[Addon host] " + form.getClass().getProtectionDomain().getCodeSource().getLocation());
         form.photon_fx.set("photon:validation");

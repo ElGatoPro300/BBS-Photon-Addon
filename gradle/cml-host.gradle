@@ -1,0 +1,10 @@
+/* Resolve a checksum-pinned Modrinth host; never consume a manually built libs/ JAR. */
+def legacy = ['cmlJar', 'libDir', 'bbs_dev_jar', 'bbs_cml_jar', 'cml_version'].findAll { providers.gradleProperty(it).isPresent() }
+if (!legacy.isEmpty()) throw new GradleException("Local CML overrides have been removed: ${legacy}. Update gradle/cml-hosts.json for a published host instead.")
+def resolveHost = providers.exec {
+    commandLine 'python', file('tools/prepare_cml.py').absolutePath, '--mc', minecraft_version
+    workingDir projectDir
+}
+resolveHost.result.get().assertNormalExitValue()
+ext.bbsHostJar = file(resolveHost.standardOutput.asText.get().trim())
+logger.lifecycle("CML ${cmlMinimumVersion}: verified Modrinth distribution for ${minecraft_version}")

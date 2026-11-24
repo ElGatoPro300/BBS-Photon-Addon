@@ -4,7 +4,7 @@ Photon supports FS 2.7 on Minecraft 1.21.1 (NeoForge with Connector). Minecraft 
 
 Photon adds upstream BBS 2.5 on Minecraft 1.21.1 (NeoForge with Connector). Other upstream versions and Minecraft targets are not declared compatible.
 
-CML remains the primary host. A release contains the canonical CML implementation
+CML remains the primary host. Compilation and CML runtime checks use the Modrinth beta pinned in `gradle/cml-hosts.json`; manually built host JARs are not selected. A release contains the canonical CML implementation
 and package-isolated secondary host implementations, generated from the same sources plus
 small explicit host overrides. Neither host is bundled. Form ids and resource ids
 remain identical across hosts.

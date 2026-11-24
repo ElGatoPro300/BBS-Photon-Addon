@@ -1,6 +1,6 @@
 # Shared Photon addon sources
 
-Current build dependency: **CML 3.0 beta 7**, pinned by `cml_version` and the addon metadata. Provision the matching beta-7 host for each configured Minecraft target. Earlier validation notes below describe the original migration.
+Current build dependency: **CML 3.0 beta 9 from Modrinth**, pinned by version ID and SHA-512 in `gradle/cml-hosts.json`. The build downloads and verifies the matching published host automatically. Earlier validation notes below describe the original migration.
 
 ## Scope and design
 
@@ -21,7 +21,9 @@ Run the Gradle wrapper on JDK 25:
 
 Installable JARs are collected in build/libs. Target-specific intermediates and test reports live under build/targets/<mc>. Every artifact declares its exact Minecraft target and corresponding Java requirement. Builds stop on unknown targets and incompatible CML dependencies.
 
-Place the existing matching CML distribution JARs in libs. A folder containing multiple versions is supported: selection checks the mod id, manifest Minecraft version and namespace. For 26.1.2 the explicitly pinned host artifact is CML 26.1 (official names), matching the existing branch. Override a folder with -PlibDir=<directory>, or select one host with -PcmlJar=<path>. The legacy -Pbbs_cml_jar override is retained. CML 3.0 beta 2 or newer is required for the 1.21.1 Connector runtime: the old beta-1 host fails in ServerWorldMixin sound injections before addon initialization. The local beta-1 JAR was preserved under libs/archive and replaced with the already available beta-2 distribution. A single override must match each selected target; use a mixed libs directory for buildAll.
+`gradle/cml-host.gradle` invokes `tools/prepare_cml.py` to resolve the pinned published CML host into `build/cml-hosts/<mc>/`. Both compilation and development/validation runs use that exact artifact. No CML checkout, local compilation or manual `libs/` provisioning is required. Cached files are checked on every resolution; a missing or corrupted download is replaced only after SHA-512, host identity, API presence, Minecraft version and mapping namespace checks pass. The first build needs network access; a verified cached host can be reused offline.
+
+The manifest's `release` also defines the CML minimum in addon metadata. To update CML, select a published compatible beta for every configured target and update its version ID, URL and SHA-512 in the manifest. Local host overrides (`cmlJar`, `libDir`, `bbs_dev_jar`, `bbs_cml_jar`, `cml_version`) are no longer supported. For 26.1.2 the published file is the CML 26.1 family artifact with official mappings.
 
 The default build remains 1.21.1. settings.gradle selects ModDevGradle 1.0.21 with Connector 2 userdev on 1.21.1, or ModDevGradle 2.0.148 with Connector 3/Launchpad on 26.1.2. Both keep NeoForge as their runtime. Development runs stage host and addon JARs in isolated build/runs/<mc>/mods; -Pgame_directory overrides that development path.
 
@@ -37,3 +39,22 @@ Artifact verification checks exact metadata, bytecode, duplicate archive entries
 The opt-in -PportSmoke fixture is excluded from release artifacts. It checks native client initialization, canonical form registration, effect/runtime serialization, renderer registration and editor construction after resource loading. Tests use build/validation/<mc>/client, never player profiles. Native run tasks use the selected Java toolchain. Connector discovers the test-only Fabric entrypoint from a separate smoke JAR staged only in the isolated validation mods folder.
 
 Visual acceptance remains separate: actual authored effects, pause/scrub and seeking, model-block/bodypart placement, preview/world alignment, cleanup and shaders enabled/disabled need in-game inspection. Native startup checks do not establish rendering parity. Both native NeoForge/Connector client fixtures passed after selecting the compatible beta-2 CML host on 1.21.1. They registered COMMON and CLIENT addon API 2, checked canonical form/renderer/editor construction and round-tripped runtime controls and saved effect ids. Both also resolved and executed the built-in invert post graph in preview mode, then verified framebuffer, viewport and scissor restoration. This does not establish correct particles or post-effect pixels in authored world scenes.
+
+## Published beta-9 host validation (2026-11-23)
+
+`buildAll` and artifact verification passed for every configured target against
+the checksum-pinned Modrinth beta-9 distributions. CML clients and dedicated
+servers passed on each target. FS and BBS 2 client regressions passed on AAA
+1.20.1 and Photon 1.21.1 with the same collected release JARs. Validation reports
+record both the loaded host version and the published host SHA-512.
+
+Integrity checks rejected corrupt hashes, mismatched host versions and wrong
+mapping namespaces. Verified cached hosts resolved with network access disabled.
+The old local-JAR override was rejected before dependency selection.
+
+On 26.1.2 the title-screen fixture verifies the registered addon palette section
+in isolation: CML's built-in Extra section constructs item stacks whose vanilla
+components are not bound before world load. `ModernPaletteChecks` handles only
+that specific host/lifecycle exception and does not change the published host
+or production addon. Complete world palette behavior, authored effects and
+shader visuals remain outside this startup verification.

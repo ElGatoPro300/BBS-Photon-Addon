@@ -37,7 +37,7 @@ if (selectedHost != null) {
         doLast {
             def metadata = new File(destinationDir, 'fabric.mod.json')
             def values = new JsonSlurper().parse(metadata)
-            values.depends.bbs = supported.isEmpty() ? '>=3.0-beta-7' : ['>=3.0-beta-7'] + supported.values().collect { '=' + it.version }
+            values.depends.bbs = supported.isEmpty() ? '>=' + cmlMinimumVersion : ['>=' + cmlMinimumVersion] + supported.values().collect { '=' + it.version }
             if (!supported.containsKey('bbs2')) {
                 values.mixins = (values.mixins ?: []).findAll { entry ->
                     !(entry instanceof String ? entry : entry.config).endsWith('.bbs2.mixins.json')

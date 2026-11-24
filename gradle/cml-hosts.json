@@ -1,0 +1,20 @@
+{
+    "project": "orQP37wm",
+    "release": "3.0-beta-9",
+    "targets": {
+        "1.21.1": {
+            "version": "3.0-beta-9-1.21.1",
+            "version_id": "BBX0o9MY",
+            "filename": "bbs-cml-3.0-beta-9-1.21.1.jar",
+            "url": "https://cdn.modrinth.com/data/orQP37wm/versions/BBX0o9MY/bbs-cml-3.0-beta-9-1.21.1.jar",
+            "sha512": "329a4add46a14e4094275e5274a530b1ac019428a16061184e24e929c35e3c508d015eabdb1d49952dd578090a0e11c20a52b494b4496790444e526e9d73ab01"
+        },
+        "26.1.2": {
+            "version": "3.0-beta-9-26.1",
+            "version_id": "EO67jvSy",
+            "filename": "bbs-cml-3.0-beta-9-26.1.jar",
+            "url": "https://cdn.modrinth.com/data/orQP37wm/versions/EO67jvSy/bbs-cml-3.0-beta-9-26.1.jar",
+            "sha512": "11bb88363b965d00762bb44dfe5b986462d15d6190cc4c6d9cdb9753f9970b22afc45924bb5a4c9e5408ca72c74238fc0c1b64c5d3a08edea941d3266ecd092c"
+        }
+    }
+}

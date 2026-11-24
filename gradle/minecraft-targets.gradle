@@ -5,3 +5,6 @@ if (!targets.containsKey(selected)) throw new GradleException("Unsupported Minec
 ext.minecraft_version = selected
 ext.minecraftTarget = targets[selected]
 layout.buildDirectory = file("build/targets/${selected}")
+
+/* One source of truth for the published compile/runtime host and metadata minimum. */
+ext.cmlMinimumVersion = new JsonSlurper().parse(file("gradle/cml-hosts.json")).release

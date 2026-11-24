@@ -32,7 +32,7 @@
         "fabricloader": ">=0.19.5",
         "minecraft": "=${minecraft_version}",
         "java": ">=${java_version}",
-        "bbs": ">=3.0-beta-7",
+        "bbs": ">=${cml_minimum_version}",
         "photon": ">=2.2.8"
     },
     "languageAdapters": {
