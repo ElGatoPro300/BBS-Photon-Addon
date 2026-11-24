@@ -4,6 +4,8 @@ Current build dependency: **CML 3.0 beta 9 from Modrinth**, pinned by version ID
 
 ## Scope and design
 
+CML is the primary host and uses the canonical addon sources. Minecraft version selection (`gradle/minecraft-targets.gradle`) is independent of optional host compatibility (`gradle/host-compat.gradle`). The latter builds isolated FS/BBS 2 adapters through `tools/prepare_host_compat.py` and `tools/build_host_compat.py`, always with an explicit `--host`. See [host compatibility](host-compatibility.md) for those secondary distributions.
+
 The existing version branches now share a source tree. Two NeoForge/Connector targets are configured: 1.21.1 and 26.1.2.
 
 Shared form definitions, serialized Value identifiers, effect loading, playback and editor controls remain in their existing packages. Native version boundaries live in src/platform. NativeBbsAccess isolates legacy intermediary CML access and official typed access; NativePhotonAssets isolates the ResourceLocation/Identifier change. NativePostPreview owns each dependency family's HDR target, graph execution and GL state restoration. PhotonPostEffects keeps submission, parameters and once-per-frame behavior shared.

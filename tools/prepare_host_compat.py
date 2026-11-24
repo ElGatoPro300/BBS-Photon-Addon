@@ -1,4 +1,4 @@
-"""Fetch a pinned published host and generate its isolated adapter sources.
+"""Prepare an explicit secondary host adapter from the canonical CML addon sources.
 
 Java string literals, comments and serialized resource identifiers are preserved.
 Only Java package/type tokens are relocated. Host overrides replace canonical files.
@@ -17,7 +17,7 @@ TOKEN = re.compile(r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mc', required=True)
-    parser.add_argument('--host', choices=['fs', 'bbs2'], default='fs')
+    parser.add_argument('--host', choices=['fs', 'bbs2'], required=True)
     args = parser.parse_args()
     manifest = json.loads((ROOT / f'gradle/{args.host}-hosts.json').read_text())
     host = manifest['targets'][args.mc]

@@ -16,10 +16,10 @@ if (!modern) apply plugin: 'org.sinytra.adapter.userdev'
 def compatHost = providers.gradleProperty('compatHost').orNull ?: (providers.gradleProperty('fsCompileOnly').isPresent() ? 'fs' : null)
 if (compatHost != null) {
     if (!(compatHost in ['fs', 'bbs2'])) throw new GradleException('Unsupported compatibility host: ' + compatHost)
-    def hosts = new groovy.json.JsonSlurper().parse(file("gradle/${compatHost ?: 'fs'}-hosts.json"))
-    def fs = hosts.targets[minecraft_version]
-    if (fs == null) throw new GradleException("No FS host for ${minecraft_version}")
-    ext.bbsHostJar = file("build/${compatHost}-compat/${minecraft_version}/${fs.filename}")
+    def hosts = new groovy.json.JsonSlurper().parse(file("gradle/${compatHost}-hosts.json"))
+    def hostSpec = hosts.targets[minecraft_version]
+    if (hostSpec == null) throw new GradleException("No ${compatHost} host for ${minecraft_version}")
+    ext.bbsHostJar = file("build/${compatHost}-compat/${minecraft_version}/${hostSpec.filename}")
 } else {
     apply from: 'gradle/cml-host.gradle'
 }
@@ -60,10 +60,10 @@ dependencies {
 }
 tasks.register('stageCmlHost', Copy) {
     def host = providers.gradleProperty('smokeHost').getOrElse('cml')
-    def fs = new groovy.json.JsonSlurper().parse(file("gradle/${host == 'cml' ? 'fs' : host}-hosts.json")).targets[minecraft_version]
-    from host != 'cml' ? file("build/${host}-compat/${minecraft_version}/${fs.filename}") : bbsHostJar
+    def hostSpec = host == 'cml' ? null : new groovy.json.JsonSlurper().parse(file("gradle/${host}-hosts.json")).targets[minecraft_version]
+    from host != 'cml' ? file("build/${host}-compat/${minecraft_version}/${hostSpec.filename}") : bbsHostJar
     into new File(runFolder, 'mods')
-    rename { host != 'cml' ? fs.filename : 'bbs-cml-host.jar' }
+    rename { host != 'cml' ? hostSpec.filename : 'bbs-cml-host.jar' }
 }
 tasks.register('stageConnectorAddon', Copy) {
     dependsOn tasks.named('jar')
@@ -85,4 +85,4 @@ tasks.named('build') { dependsOn 'collectReleaseJar' }
 
 if (providers.gradleProperty('portSmoke').isPresent()) apply from: 'gradle/smoke.gradle'
 
-apply from: 'gradle/fs-compat.gradle'
+apply from: 'gradle/host-compat.gradle'

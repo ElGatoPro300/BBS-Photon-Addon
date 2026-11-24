@@ -18,6 +18,9 @@ tasks.register('stagePortSmoke', Copy) {
 }
 ['runClient', 'runServer'].each { name -> tasks.named(name) { dependsOn 'stagePortSmoke' } }
 
-sourceSets.portSmoke.compileClasspath += files("build/${providers.gradleProperty('smokeHost').getOrElse('fs')}-compat/${minecraft_version}/classes-build/classes/java/main")
+def smokeHost = providers.gradleProperty('smokeHost').getOrElse('cml')
+if (smokeHost != 'cml') {
+    sourceSets.portSmoke.compileClasspath += files("build/${smokeHost}-compat/${minecraft_version}/classes-build/classes/java/main")
+}
 
 tasks.named('compilePortSmokeJava') { dependsOn { tasks.findAll { it.name in ['compileFsCompatibility', 'compileBbs2Compatibility'] } } }

@@ -33,7 +33,7 @@ def main():
         source.parent.mkdir(parents=True, exist_ok=True)
         text = (ROOT / ('tools/smoke/AddonServerSmoke.java' if args.server else 'tools/smoke/AddonClientSmoke.java')).read_text(encoding='utf-8')
         if args.host != 'cml':
-            subprocess.run([shutil.which('python'), str(ROOT / 'tools/prepare_fs.py'), '--mc', mc, '--host', args.host], cwd=ROOT, check=True)
+            subprocess.run([shutil.which('python'), str(ROOT / 'tools/prepare_host_compat.py'), '--mc', mc, '--host', args.host], cwd=ROOT, check=True)
             text = text.replace(hosts['package'] + '.', hosts['package'] + '.' + args.host + '.')
         if KIND == 'photon' or mc.startswith('26.'):
             text = text.replace('client.currentScreen', 'client.screen').replace('client.scheduleStop()', 'client.stop()')

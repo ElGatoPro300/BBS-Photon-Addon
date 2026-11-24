@@ -40,4 +40,4 @@ See `LICENSE.md` for information about the license.
 ## BBS host compatibility
 
 The same release JAR selects CML, the supported published FS host, or upstream BBS 2.5 automatically. Upstream support starts with Minecraft 1.21.1; other targets retain their existing host support.
-See [host compatibility](docs/fs-compatibility.md) for supported targets, reproducible builds and validation.
+See [host compatibility](docs/host-compatibility.md) for supported targets, reproducible builds and validation.

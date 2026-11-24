@@ -1,4 +1,4 @@
-"""Compile the isolated host implementation with its own Gradle cache and outputs."""
+"""Compile a secondary host adapter; the normal build uses canonical CML sources."""
 import argparse
 import os
 import shutil
@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mc', required=True)
-    parser.add_argument('--host', choices=['fs', 'bbs2'], default='fs')
+    parser.add_argument('--host', choices=['fs', 'bbs2'], required=True)
     args = parser.parse_args()
-    subprocess.run([sys.executable, str(ROOT / 'tools/prepare_fs.py'), '--mc', args.mc, '--host', args.host], cwd=ROOT, check=True)
+    subprocess.run([sys.executable, str(ROOT / 'tools/prepare_host_compat.py'), '--mc', args.mc, '--host', args.host], cwd=ROOT, check=True)
     cache = ROOT / f'build/{args.host}-compat' / args.mc / 'gradle-cache'
     tasks = ['compileJava']
     if (ROOT / 'src/client/java').exists():

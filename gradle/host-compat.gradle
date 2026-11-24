@@ -19,10 +19,10 @@ if (selectedHost != null) {
 } else {
     supported.each { host, spec ->
         def compileHost = tasks.register(host == 'fs' ? 'compileFsCompatibility' : 'compileBbs2Compatibility', Exec) {
-            inputs.files(fileTree('src') { include '**/*.java' }, fileTree('tools') { include '*_fs.py' }, fileTree('gradle'))
+            inputs.files(fileTree('src') { include '**/*.java' }, fileTree('tools') { include '*_host_compat.py' }, fileTree('gradle'))
             outputs.dir file("build/${host}-compat/${minecraft_version}/classes-build/classes/java")
             environment 'JAVA_HOME', System.getProperty('java.home')
-            commandLine 'python', 'tools/build_fs.py', '--mc', minecraft_version, '--host', host
+            commandLine 'python', 'tools/build_host_compat.py', '--mc', minecraft_version, '--host', host
         }
         tasks.named('jar') {
             dependsOn compileHost
