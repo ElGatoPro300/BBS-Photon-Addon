@@ -6,7 +6,7 @@ I hope this code helps you with your BBS addons!
 
 ## Runtime
 
-One source tree supports **NeoForge + Sinytra Connector** on Minecraft **1.21.1 and 26.1.2**. The exact Photon, LDLib, Connector, FFAPI and NeoForge dependencies are pinned in `gradle/minecraft-targets.json`. CML addon API 2 remains the host contract. The canonical `bbs:photon` form and persistent Value identifiers are preserved.
+One source tree supports **NeoForge + Sinytra Connector** on Minecraft **1.21.1 and 26.1.2**. The exact Photon, LDLib, Connector, FFAPI and NeoForge dependencies are pinned in `gradle/minecraft-targets.json`. CML uses addon API 2; FS and upstream BBS 2 use isolated host adapters. The canonical `bbs:photon` form and persistent Value identifiers are preserved.
 
 The editor provides per-object animated parameters, film synchronization, seeds, anchors, signals and isolated post-effect previews. See [runtime controls](docs/architecture/photon-runtime-features.md) for behavior and limits.
 
@@ -37,7 +37,7 @@ Host addon API reference: [BBS CML 3.0 `docs/ADDONS.md`](https://github.com/ElGa
 
 See `LICENSE.md` for information about the license.
 
-## BBS FS compatibility
+## BBS host compatibility
 
-The same release JAR selects CML or the supported published FS host automatically.
+The same release JAR selects CML, the supported published FS host, or upstream BBS 2.5 automatically. Upstream support starts with Minecraft 1.21.1; other targets retain their existing host support.
 See [host compatibility](docs/fs-compatibility.md) for supported targets, reproducible builds and validation.

@@ -13,11 +13,13 @@ def target = minecraftTarget
 def modern = target.namespace == 'official'
 apply plugin: 'net.neoforged.moddev'
 if (!modern) apply plugin: 'org.sinytra.adapter.userdev'
-if (providers.gradleProperty('fsCompileOnly').isPresent()) {
-    def hosts = new groovy.json.JsonSlurper().parse(file('gradle/fs-hosts.json'))
+def compatHost = providers.gradleProperty('compatHost').orNull ?: (providers.gradleProperty('fsCompileOnly').isPresent() ? 'fs' : null)
+if (compatHost != null) {
+    if (!(compatHost in ['fs', 'bbs2'])) throw new GradleException('Unsupported compatibility host: ' + compatHost)
+    def hosts = new groovy.json.JsonSlurper().parse(file("gradle/${compatHost ?: 'fs'}-hosts.json"))
     def fs = hosts.targets[minecraft_version]
     if (fs == null) throw new GradleException("No FS host for ${minecraft_version}")
-    ext.localCmlJar = file("build/fs-compat/${minecraft_version}/${fs.filename}")
+    ext.localCmlJar = file("build/${compatHost}-compat/${minecraft_version}/${fs.filename}")
 } else {
     apply from: 'gradle/local-cml.gradle'
 }
@@ -57,10 +59,11 @@ dependencies {
     compileOnly files(localCmlJar)
 }
 tasks.register('stageCmlHost', Copy) {
-    def fs = new groovy.json.JsonSlurper().parse(file('gradle/fs-hosts.json')).targets[minecraft_version]
-    from providers.gradleProperty('smokeHost').getOrElse('cml') == 'fs' ? file("build/fs-compat/${minecraft_version}/${fs.filename}") : localCmlJar
+    def host = providers.gradleProperty('smokeHost').getOrElse('cml')
+    def fs = new groovy.json.JsonSlurper().parse(file("gradle/${host == 'cml' ? 'fs' : host}-hosts.json")).targets[minecraft_version]
+    from host != 'cml' ? file("build/${host}-compat/${minecraft_version}/${fs.filename}") : localCmlJar
     into new File(runFolder, 'mods')
-    rename { providers.gradleProperty('smokeHost').getOrElse('cml') == 'fs' ? fs.filename : 'bbs-cml-host.jar' }
+    rename { host != 'cml' ? fs.filename : 'bbs-cml-host.jar' }
 }
 tasks.register('stageConnectorAddon', Copy) {
     dependsOn tasks.named('jar')
@@ -74,6 +77,7 @@ processResources {
     def values = [version: project.version, minecraft_version: minecraft_version, java_version: target.java]
     inputs.properties values
     filesMatching('fabric.mod.json') { expand values }
+    filesMatching('*bbs2.mixins.json') { expand java_version: target.java }
 }
 publishing { publications { mavenJava(MavenPublication) { from components.java } } }
 tasks.register('collectReleaseJar', Copy) { dependsOn tasks.named('jar'); from tasks.named('jar'); into file('build/libs') }

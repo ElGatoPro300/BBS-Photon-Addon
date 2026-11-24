@@ -26,7 +26,20 @@ public final class HostLanguageAdapter implements LanguageAdapter
             return canonical.replace("elgatopro300.bbsphoton.", "elgatopro300.bbsphoton.fs.");
         }
 
+        if (isBbs2())
+        {
+            return canonical.replace("elgatopro300.bbsphoton.", "elgatopro300.bbsphoton.bbs2.");
+        }
+
         throw new IllegalStateException("Unsupported BBS host: " + host.getMetadata().getName() + " " + version);
+    }
+
+    public static boolean isBbs2()
+    {
+        return FabricLoader.getInstance().getModContainer("bbs").map(host ->
+            "BBS mod".equals(host.getMetadata().getName())
+                && "2.5-1.21.1".equals(host.getMetadata().getVersion().getFriendlyString())
+                && host.getMetadata().getCustomValue("bbs:fork_id") == null).orElse(false);
     }
 
     @Override

@@ -37,5 +37,11 @@
     },
     "languageAdapters": {
         "photon-host": "elgatopro300.bbsphoton.compat.host.HostLanguageAdapter"
-    }
+    },
+    "mixins": [
+        {
+            "config": "bbs-photon.bbs2.mixins.json",
+            "environment": "client"
+        }
+    ]
 }

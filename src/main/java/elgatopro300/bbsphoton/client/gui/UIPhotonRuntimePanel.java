@@ -111,7 +111,7 @@ public class UIPhotonRuntimePanel extends UIFormPanel<PhotonForm>
 
     private void number(UIElement fields, String label, BaseValueNumber<?> value)
     {
-        UITrackpad control = new UITrackpad(value::setNumber);
+        UITrackpad control = new UITrackpad(number -> HostEditorAccess.setNumber(value, number));
         control.setValue(value.get().doubleValue());
         control.limit(value.getMin().doubleValue(), value.getMax().doubleValue());
         this.field(fields, label, control);
@@ -284,7 +284,7 @@ public class UIPhotonRuntimePanel extends UIFormPanel<PhotonForm>
             this.button(fields, "pick_attachment", () ->
             {
                 List<String> names = new ArrayList<>(FormUtilsClient.getRenderer(FormUtils.getRoot(this.form))
-                    .collectMatrices(this.editor.editor.renderer.getTargetEntity(), 0F).keySet());
+                    .collectMatrices(HostEditorAccess.entity(this.editor), 0F).keySet());
                 names.sort(String::compareToIgnoreCase);
                 this.choose("attachment", names, name -> { entry.attachment.set(name); this.rebuild(); });
             });

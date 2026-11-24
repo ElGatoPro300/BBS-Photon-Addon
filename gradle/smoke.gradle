@@ -1,7 +1,7 @@
 sourceSets {
     portSmoke {
-        java.srcDir file("build/validation/${minecraft_version}/sources")
-        resources.srcDir file("build/validation/${minecraft_version}/resources")
+        java.srcDir file("build/validation/${minecraft_version}/${providers.gradleProperty('smokeHost').getOrElse('cml')}-${providers.gradleProperty('smokeSide').getOrElse('client')}-sources")
+        resources.srcDir file("build/validation/${minecraft_version}/${providers.gradleProperty('smokeHost').getOrElse('cml')}-${providers.gradleProperty('smokeSide').getOrElse('client')}-resources")
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
     }
 }
@@ -16,8 +16,8 @@ tasks.register('stagePortSmoke', Copy) {
     from tasks.named('portSmokeJar')
     into file(providers.gradleProperty('game_directory').getOrElse("build/runs/${minecraft_version}") + '/mods')
 }
-tasks.named('runClient') { dependsOn 'stagePortSmoke' }
+['runClient', 'runServer'].each { name -> tasks.named(name) { dependsOn 'stagePortSmoke' } }
 
-sourceSets.portSmoke.compileClasspath += files("build/fs-compat/${minecraft_version}/classes-build/classes/java/main")
+sourceSets.portSmoke.compileClasspath += files("build/${providers.gradleProperty('smokeHost').getOrElse('fs')}-compat/${minecraft_version}/classes-build/classes/java/main")
 
-tasks.named('compilePortSmokeJava') { dependsOn { tasks.findByName('compileFsCompatibility') == null ? [] : [tasks.named('compileFsCompatibility')] } }
+tasks.named('compilePortSmokeJava') { dependsOn { tasks.findAll { it.name in ['compileFsCompatibility', 'compileBbs2Compatibility'] } } }

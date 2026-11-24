@@ -1,0 +1,14 @@
+{
+    "required": true,
+    "package": "elgatopro300.bbsphoton.bbs2.compat.mixin",
+    "plugin": "elgatopro300.bbsphoton.compat.host.Bbs2MixinPlugin",
+    "compatibilityLevel": "JAVA_${java_version}",
+    "client": [
+        "BbsClientMixin",
+        "FormCategoriesMixin",
+        "KeyframeEditorMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

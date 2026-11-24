@@ -1,8 +1,12 @@
 package ports.smoke;
 
+import mchorse.bbs_mod.BBSModClient;
+import mchorse.bbs_mod.forms.FormCategories;
 import mchorse.bbs_mod.forms.FormUtils;
 import mchorse.bbs_mod.forms.FormUtilsClient;
 import mchorse.bbs_mod.forms.renderers.FormRenderingContext;
+import mchorse.bbs_mod.l10n.L10n;
+import mchorse.bbs_mod.ui.forms.editors.UIFormEditor;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -67,6 +71,19 @@ public final class AddonClientSmoke implements ClientModInitializer
         require(form.photon_fx.get().equals(copy.photon_fx.get()), "effect serialization");
         require(FormUtilsClient.getRenderer(form) instanceof PhotonFormRenderer, "renderer registration");
         require(new UIPhotonForm() != null, "editor construction");
+        require(UIFormEditor.createPanel(form) instanceof UIPhotonForm, "editor registration");
+        FormCategories categories = new FormCategories();
+        categories.setup();
+        require(categories.getAllCategories().stream().flatMap(category -> category.getForms().stream())
+            .anyMatch(entry -> entry instanceof PhotonForm), "palette registration");
+        int categoryCount = categories.getAllCategories().size();
+        categories.setup();
+        require(categories.getAllCategories().size() == categoryCount, "palette rebuild without duplicates");
+        BBSModClient.reloadLanguage("es_es");
+        require("Pausado".equals(L10n.lang("bbs_photon.ui.paused").get()), "Spanish translation loading");
+        BBSModClient.reloadLanguage("en_us");
+        require("Paused".equals(L10n.lang("bbs_photon.ui.paused").get()), "English translation switching");
+
         boolean postEnabled = PhotonConfig.INSTANCE.enableCustomEffects.get();
         PhotonConfig.INSTANCE.enableCustomEffects.set(true);
         require(PostEffectStack.resolveEffect(
