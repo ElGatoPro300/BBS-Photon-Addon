@@ -43,7 +43,7 @@ def main():
             relative = path.relative_to(source_root)
             if args.host == 'bbs2' and path.name in {'ParticleClientRegistration.java', 'PhotonClientRegistration.java', 'UIPhotonFxKeyframeFactory.java'}:
                 continue
-            if '/mixin/' in '/' + relative.as_posix() or '/compat/host/' in '/' + relative.as_posix():
+            if '/compat/cml/' in '/' + relative.as_posix() or '/mixin/' in '/' + relative.as_posix() or '/compat/host/' in '/' + relative.as_posix():
                 continue
             group = 'client' if '/client/java' in source_root.as_posix() else 'main'
             sources[(group, relative)] = path

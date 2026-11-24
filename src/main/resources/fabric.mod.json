@@ -42,6 +42,10 @@
         {
             "config": "bbs-photon.bbs2.mixins.json",
             "environment": "client"
+        },
+        {
+            "config": "bbs-photon.cml.mixins.json",
+            "environment": "client"
         }
     ]
 }

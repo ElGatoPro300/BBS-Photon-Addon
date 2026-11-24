@@ -1,0 +1,12 @@
+{
+    "required": true,
+    "package": "elgatopro300.bbsphoton.mixin.cml",
+    "plugin": "elgatopro300.bbsphoton.compat.host.CmlMixinPlugin",
+    "compatibilityLevel": "JAVA_${java_version}",
+    "client": [
+        "CmlTimelineMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

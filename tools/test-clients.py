@@ -38,6 +38,11 @@ def main():
         if KIND == 'photon' or mc.startswith('26.'):
             text = text.replace('client.currentScreen', 'client.screen').replace('client.scheduleStop()', 'client.stop()')
             text = text.replace('server.stop(false)', 'server.halt(false)')
+        if args.host == 'cml' and not args.server:
+            extra = (ROOT / 'tools/smoke/CmlTrackGroupsChecks.java').read_text(encoding='utf-8')
+            source.with_name('CmlTrackGroupsChecks.java').write_text(extra, encoding='utf-8')
+            text = text.replace('        require(UIFormEditor.createPanel(form)',
+                                '        CmlTrackGroupsChecks.check(form);\n        require(UIFormEditor.createPanel(form)')
         if args.host == 'bbs2' and not args.server:
             extra = (ROOT / 'tools/smoke/Bbs2ClientChecks.java').read_text(encoding='utf-8')
             extra = extra.replace(hosts['package'] + '.', hosts['package'] + '.bbs2.')
@@ -90,6 +95,8 @@ def main():
                 status = -1
         text = log_path.read_text(encoding='utf-8', errors='replace')
         passed = status == 0 and marker in text and 'BUILD SUCCESSFUL' in text[text.rfind(marker):]
+        if args.host == 'cml' and not args.server:
+            passed = passed and '[Addon ports] CML TIMELINE CATEGORIES PASSED' in text
         passed = passed and '[Addon host version] ' + host_spec['version'] in text
         passed = passed and hashlib.sha512(host_jar.read_bytes()).hexdigest() == host_spec['sha512']
         passed = passed and before == hashlib.sha512(production.read_bytes()).hexdigest()

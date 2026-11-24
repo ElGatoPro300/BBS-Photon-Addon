@@ -77,7 +77,7 @@ processResources {
     def values = [version: project.version, minecraft_version: minecraft_version, java_version: target.java, cml_minimum_version: cmlMinimumVersion]
     inputs.properties values
     filesMatching('fabric.mod.json') { expand values }
-    filesMatching('*bbs2.mixins.json') { expand java_version: target.java }
+    filesMatching(['*bbs2.mixins.json', '*cml.mixins.json']) { expand java_version: target.java }
 }
 publishing { publications { mavenJava(MavenPublication) { from components.java } } }
 tasks.register('collectReleaseJar', Copy) { dependsOn tasks.named('jar'); from tasks.named('jar'); into file('build/libs') }

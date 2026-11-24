@@ -119,3 +119,11 @@ and preview framebuffer/viewport/scissor restoration.
 These are integration checks in actual client/server processes. They do not
 establish visual native-effect or shader parity; the manual cases listed above
 remain pending.
+
+## CML timeline categories
+
+The canonical CML adapter supplies form-scoped presentation metadata to the published host timeline. CML still creates the collapsible groups, retains their disclosure state, and nests them under the owning bodypart. Stored track IDs and channels are unchanged. Shared IDs such as `paused` are classified only for this addon's form. The CML mixin is disabled on FS and BBS 2, and its helper is excluded from generated secondary adapters.
+
+Photon separates the effect, playback/signals, parameters, object anchors, and post processing. Dynamic parameter and anchor paths use the same categories as their owning lists; entry labels retain the list index. Category and field labels reuse the existing localized runtime editor keys.
+
+`tools/test-clients.py --host cml` exercises the installed distribution against the published host: actual timeline arrangement, form ownership, ordering, folded-state restoration, nested bodyparts, channel identity, and English/Spanish category switching. The timeline-specific checks are excluded from secondary-host smoke runs.
